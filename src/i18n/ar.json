@@ -1,0 +1,18 @@
+{
+  "common": {
+    "loading": "جارٍ التحميل...",
+    "retry": "أعد المحاولة",
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "done": "تم"
+  },
+  "home": {
+    "greeting": "السلام عليكم",
+    "quickActions": "إجراءات سريعة"
+  },
+  "hifz": {
+    "startRevision": "ابدأ المراجعة",
+    "newSession": "جلسة حفظ جديدة",
+    "holdToRecord": "اضغط مطولاً للتسجيل"
+  }
+}

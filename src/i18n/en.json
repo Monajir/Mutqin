@@ -1,0 +1,18 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "retry": "Try again",
+    "cancel": "Cancel",
+    "save": "Save",
+    "done": "Done"
+  },
+  "home": {
+    "greeting": "Assalamu alaikum",
+    "quickActions": "Quick Actions"
+  },
+  "hifz": {
+    "startRevision": "Start Revision",
+    "newSession": "New Hifz Session",
+    "holdToRecord": "Hold to record"
+  }
+}
