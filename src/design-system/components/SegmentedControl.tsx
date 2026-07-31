@@ -10,9 +10,15 @@ export interface SegmentedControlProps<T extends string> {
   options: { value: T; label: string }[];
   value: T;
   onChange: (value: T) => void;
+  compact?: boolean;
 }
 
-export function SegmentedControl<T extends string>({ options, value, onChange }: SegmentedControlProps<T>) {
+export function SegmentedControl<T extends string>({
+  options,
+  value,
+  onChange,
+  compact = false,
+}: SegmentedControlProps<T>) {
   const { tokens } = useAppTheme();
 
   return (
@@ -20,8 +26,10 @@ export function SegmentedControl<T extends string>({ options, value, onChange }:
       style={{
         flexDirection: 'row',
         backgroundColor: tokens.background.secondary,
-        borderRadius: radii.md,
+        borderRadius: radii.pill,
         padding: spacing[1],
+        borderWidth: 1,
+        borderColor: tokens.border.subtle,
       }}
     >
       {options.map((opt) => {
@@ -34,13 +42,14 @@ export function SegmentedControl<T extends string>({ options, value, onChange }:
             accessibilityState={{ selected: active }}
             style={{
               flex: 1,
-              paddingVertical: spacing[2],
-              borderRadius: radii.sm,
-              backgroundColor: active ? tokens.background.elevated : 'transparent',
+              paddingVertical: compact ? 6 : spacing[2],
+              paddingHorizontal: compact ? spacing[3] : spacing[2],
+              borderRadius: radii.pill,
+              backgroundColor: active ? tokens.brand.primary : 'transparent',
               alignItems: 'center',
             }}
           >
-            <Text variant="bodySm" weight="600" color={active ? 'primary' : 'secondary'}>
+            <Text variant={compact ? 'caption' : 'bodySm'} weight="600" color={active ? 'inverse' : 'secondary'}>
               {opt.label}
             </Text>
           </Pressable>

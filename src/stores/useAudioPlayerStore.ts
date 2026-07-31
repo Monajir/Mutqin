@@ -32,22 +32,28 @@ export const useAudioPlayerStore = create<AudioPlayerState>((set, get) => ({
 
   play: async (track) => {
     const { sound: existing } = get();
-    if (existing) await existing.unloadAsync();
+    if (existing) await existing.unloadAsync().catch(() => {});
+    set({ currentTrack: null, sound: null, isPlaying: false, positionSec: 0, durationSec: 0 });
 
-    await Audio.setAudioModeAsync({ playsInSilentModeIOS: true, staysActiveInBackground: false });
+    try {
+      await Audio.setAudioModeAsync({ playsInSilentModeIOS: true, staysActiveInBackground: false });
 
-    const { sound } = await Audio.Sound.createAsync({ uri: track.uri }, { shouldPlay: true });
-    sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
-      if (!status.isLoaded) return;
-      set({
-        positionSec: status.positionMillis / 1000,
-        durationSec: (status.durationMillis ?? 0) / 1000,
-        isPlaying: status.isPlaying,
+      const { sound } = await Audio.Sound.createAsync({ uri: track.uri }, { shouldPlay: true });
+      sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
+        if (!status.isLoaded) return;
+        set({
+          positionSec: status.positionMillis / 1000,
+          durationSec: (status.durationMillis ?? 0) / 1000,
+          isPlaying: status.isPlaying,
+        });
+        if (status.didJustFinish) set({ isPlaying: false, positionSec: 0 });
       });
-      if (status.didJustFinish) set({ isPlaying: false, positionSec: 0 });
-    });
 
-    set({ currentTrack: track, sound, isPlaying: true });
+      set({ currentTrack: track, sound, isPlaying: true });
+    } catch (error) {
+      set({ currentTrack: null, sound: null, isPlaying: false, positionSec: 0, durationSec: 0 });
+      throw error;
+    }
   },
 
   togglePlayback: async () => {

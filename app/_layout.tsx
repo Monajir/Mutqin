@@ -4,13 +4,13 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import * as SplashScreen from 'expo-splash-screen';
+import { useFonts } from 'expo-font';
 import { ThemeProvider } from '@/design-system/theme';
 import { ToastProvider } from '@/design-system/components';
 import { ErrorBoundary, OfflineBanner } from '@/components';
 import { queryClient } from '@/lib/queryClient';
 import { queryPersister } from '@/services/storage/queryPersister';
-import { runMigrations } from '@/services/storage/sqlite';
-import { seedContentIfEmpty } from '@/services/storage/seed/seedContent';
+import { initializeDatabase } from '@/services/storage/sqlite';
 import { initConnectivityListener } from '@/stores';
 import { useAppStore } from '@/stores';
 import { View } from 'react-native';
@@ -49,20 +49,45 @@ export default function RootLayout() {
   const setDbReady = useAppStore((s) => s.setDbReady);
   const isDbReady = useAppStore((s) => s.isDbReady);
   const [bootError, setBootError] = useState<Error | null>(null);
+  const [fontsLoaded, fontError] = useFonts({
+    KFGQPCUthmanicScript: require('../assets/fonts/KFGQPCUthmanicScriptHAFS.ttf'),
+  });
 
   useEffect(() => {
-    try {
-      runMigrations();
-      seedContentIfEmpty();
-      setDbReady(true);
-    } catch (err) {
-      setBootError(err instanceof Error ? err : new Error('Failed to initialize local database'));
-    } finally {
+    if (fontError) {
       SplashScreen.hideAsync().catch(() => {});
+      setBootError(fontError);
+    }
+  }, [fontError]);
+
+  useEffect(() => {
+    if (isDbReady && fontsLoaded) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded, isDbReady]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function bootstrap() {
+      try {
+        await initializeDatabase();
+        if (isMounted) setDbReady(true);
+      } catch (err) {
+        if (isMounted) {
+          SplashScreen.hideAsync().catch(() => {});
+          setBootError(err instanceof Error ? err : new Error('Failed to initialize local database'));
+        }
+      }
     }
 
     const unsubscribe = initConnectivityListener();
-    return unsubscribe;
+    void bootstrap();
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, [setDbReady]);
 
   if (bootError) {
@@ -78,10 +103,22 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: queryPersister }}>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{
+            persister: queryPersister,
+            // Discard caches created from the former three-surah demo dataset.
+            buster: 'quran-content-1.0.0-full',
+            // Quran reference data is already local in SQLite; persisting a
+            // second copy can leave the UI showing an obsolete content pack.
+            dehydrateOptions: {
+              shouldDehydrateQuery: (query) => query.queryKey[0] !== 'quran',
+            },
+          }}
+        >
           <ThemeProvider>
             <ToastProvider>
-              {isDbReady ? <RootNavigator /> : <Slot />}
+              {isDbReady && fontsLoaded ? <RootNavigator /> : <Slot />}
             </ToastProvider>
           </ThemeProvider>
         </PersistQueryClientProvider>
@@ -89,4 +126,3 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
-

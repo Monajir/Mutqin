@@ -117,7 +117,7 @@ Feature code never touches `getDb()` or `kvStorage` directly except inside that 
 4. Set up `jest-expo` test running in CI; add unit tests for the pure functions first — `scoreRecitation.ts`, `prayerTimeCalculator.ts` — since they're already isolated and dependency-free.
 
 ### Phase 1 — Content pipeline (blocks nearly everything downstream)
-1. Real mushaf ingestion into SQLite (114 surahs, 6236 ayahs) — replace `seedContent.ts`'s 3-surah demo set. This is a data pipeline task (source verification per spec's "Authenticity first" note), not application code.
+1. Verify the authenticity and provenance of the bundled full-mushaf SQLite dataset (114 surahs, 6236 ayahs) before production release.
 2. Hadith and Dua/Adhkar reference content ingestion, same authenticity bar.
 3. Audio CDN/hosting for Qari recitations — `AyahRow`/`AudioPlayerBar` are already wired to consume `uri` strings; only the URL scheme needs to be finalized.
 
@@ -151,7 +151,7 @@ Build order, each following `features/quran/{types,api/*Repository.ts,api/*Queri
 ## 9. Known limitations of this scaffold (be upfront about these)
 
 - **No backend exists.** `services/api/client.ts` and every endpoint in `endpoints.ts` point at a URL that returns nothing today. The app runs fully offline against seeded SQLite data.
-- **Seed content is 3 surahs**, not the full mushaf — enough to demonstrate every screen and the Hifz flow end-to-end, not enough to actually memorize the Quran with.
+- **The full mushaf is bundled for offline use**, but its source and text still need the production authenticity review required by the specification.
 - **Prayer time math is an approximation**, clearly flagged in code and here, not fiqh-accurate.
 - **No test suite yet** — `jest`/`jest-expo` are in `package.json` but no test files are included; Phase 0 task.
 - **Fonts aren't bundled** — `typography.ts` references font families that need to be added via `expo-font` + actual font files in `assets/fonts/`.

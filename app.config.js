@@ -40,6 +40,7 @@ module.exports = ({ config }) => ({
     },
     extra: {
         apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL ?? 'https://api.mutqin.app/v1',
+        audioBaseUrl: process.env.EXPO_PUBLIC_AUDIO_BASE_URL ?? null,
         contentVersion: '1.0.0',
         eas: {
             projectId: "3d764400-4bf3-4338-bf78-41052f1aeec2",

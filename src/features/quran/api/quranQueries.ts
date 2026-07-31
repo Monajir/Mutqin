@@ -1,19 +1,24 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { quranKeys } from './quranKeys';
 import { quranRepository } from './quranRepository';
 import { getJson, StorageKeys } from '@/services/storage/mmkv';
 import type { LastReadPosition } from '../types/quran.types';
+import type { Ayah, Surah } from '@/types';
 
-export function useQuranSurahs() {
-  return useQuery({
+export function useQuranSurahs(): UseQueryResult<Surah[], Error> {
+  return useQuery<Surah[], Error>({
     queryKey: quranKeys.surahs(),
     queryFn: () => quranRepository.getAllSurahs(),
     staleTime: Infinity, // bundled reference content — never goes stale within a session
   });
 }
 
-export function useAyahRange(surahId: number | null, startAyah: number | null, count: number) {
-  return useQuery({
+export function useAyahRange(
+  surahId: number | null,
+  startAyah: number | null,
+  count: number
+): UseQueryResult<Ayah[], Error> {
+  return useQuery<Ayah[], Error>({
     queryKey: quranKeys.ayahRange(surahId, startAyah, count),
     queryFn: () => quranRepository.getAyahRange(surahId as number, startAyah as number, count),
     enabled: surahId !== null && startAyah !== null,

@@ -4,6 +4,7 @@ import { Pressable } from './Pressable';
 import { Icon, type IconName } from './Icon';
 import { radii } from '../tokens/radii';
 import { spacing } from '../tokens/spacing';
+import { useAppTheme } from '../theme';
 
 export interface IconButtonProps {
   name: IconName;
@@ -12,9 +13,20 @@ export interface IconButtonProps {
   color?: 'primary' | 'secondary' | 'muted' | 'inverse' | 'brand';
   accessibilityLabel: string;
   disabled?: boolean;
+  variant?: 'ghost' | 'soft';
 }
 
-export function IconButton({ name, onPress, size = 20, color = 'primary', accessibilityLabel, disabled }: IconButtonProps) {
+export function IconButton({
+  name,
+  onPress,
+  size = 20,
+  color = 'primary',
+  accessibilityLabel,
+  disabled,
+  variant = 'ghost',
+}: IconButtonProps) {
+  const { tokens } = useAppTheme();
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -26,6 +38,9 @@ export function IconButton({ name, onPress, size = 20, color = 'primary', access
       style={{
         padding: spacing[2],
         borderRadius: radii.pill,
+        backgroundColor: variant === 'soft' ? tokens.background.secondary : 'transparent',
+        borderWidth: variant === 'soft' ? 1 : 0,
+        borderColor: tokens.border.subtle,
         alignItems: 'center',
         justifyContent: 'center',
       }}
