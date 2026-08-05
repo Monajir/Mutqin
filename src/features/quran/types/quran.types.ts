@@ -19,3 +19,11 @@ export interface QuranSearchResult {
   snippet: string;
   matchType: 'arabic' | 'translation';
 }
+
+export interface DailyQuranVerse {
+  surahId: number;
+  ayahNumber: number;
+  arabic: string;
+  translation: string;
+  reference: string;
+}

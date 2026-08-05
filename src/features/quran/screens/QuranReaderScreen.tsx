@@ -14,6 +14,7 @@ import { useAyahRange, useQuranSurahs } from '../api/quranQueries';
 import { useSetLastRead } from '../api/quranMutations';
 import { AyahRow } from '../components/AyahRow';
 import { useAudioPlayerStore } from '@/stores';
+import { useBookmarkRefs, useToggleBookmark } from '@/features/bookmarks';
 import { env } from '@/config/env';
 import type { Ayah } from '@/types';
 
@@ -135,6 +136,8 @@ export function QuranReaderScreen() {
   const { data: surahs } = useQuranSurahs();
   const { data: ayahs, isLoading } = useAyahRange(surahId, 1, MAX_SURAH_AYAHS);
   const setLastRead = useSetLastRead();
+  const { data: bookmarkRefs = [] } = useBookmarkRefs('quran');
+  const toggleBookmark = useToggleBookmark();
   const playTrack = useAudioPlayerStore((state) => state.play);
   const { show: showToast } = useToast();
   const returnToSurahList = useCallback(() => {
@@ -161,6 +164,7 @@ export function QuranReaderScreen() {
     if (surahId === 1) return ayahs;
     return ayahs.map(withoutBasmalaPrefix);
   }, [ayahs, surahId]);
+  const bookmarkedRefs = useMemo(() => new Set(bookmarkRefs), [bookmarkRefs]);
 
   if (isLoading) {
     return (
@@ -240,8 +244,19 @@ export function QuranReaderScreen() {
                 <AyahRow
                   ayah={item}
                   showTranslation
-                  isBookmarked={false}
-                  onToggleBookmark={() => {}}
+                  isBookmarked={bookmarkedRefs.has(`${item.surahId}:${item.ayahNumber}`)}
+                  onToggleBookmark={() => {
+                    toggleBookmark.mutate(
+                      { contentType: 'quran', contentRef: `${item.surahId}:${item.ayahNumber}` },
+                      {
+                        onSuccess: (result) => showToast(
+                          result.added ? 'Verse bookmarked' : 'Bookmark removed',
+                          'success'
+                        ),
+                        onError: () => showToast('Could not update bookmark', 'error'),
+                      }
+                    );
+                  }}
                   onPlayAudio={() => {
                     if (!env.audioBaseUrl) {
                       showToast('Recitation audio is not configured yet.');

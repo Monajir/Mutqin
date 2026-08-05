@@ -62,6 +62,41 @@ export function calculatePrayerTimesForDay(
   };
 }
 
+/**
+ * Recomputes the time-sensitive fields from the prayer timestamps. This is
+ * intentionally separate from the daily calculation so the UI can update
+ * every second without rerunning the astronomical calculation or refetching.
+ */
+export function getLivePrayerTiming(
+  data: PrayerTimesForDay,
+  nowMs = Date.now()
+): PrayerTimesForDay {
+  const salahEntries = data.prayers.filter((prayer) => prayer.name !== 'Sunrise');
+  const currentEntry = [...salahEntries]
+    .reverse()
+    .find((prayer) => new Date(prayer.time).getTime() <= nowMs);
+  const upcomingEntry = salahEntries.find(
+    (prayer) => new Date(prayer.time).getTime() > nowMs
+  );
+
+  const nextPrayer = upcomingEntry?.name ?? 'Fajr';
+  const nextPrayerTimeMs = upcomingEntry
+    ? new Date(upcomingEntry.time).getTime()
+    : new Date(salahEntries[0]!.time).getTime() + 24 * 60 * 60 * 1000;
+
+  return {
+    ...data,
+    currentPrayer: currentEntry?.name ?? null,
+    nextPrayer,
+    nextPrayerCountdownSec: Math.max(0, Math.floor((nextPrayerTimeMs - nowMs) / 1000)),
+    prayers: data.prayers.map((prayer) => ({
+      ...prayer,
+      isPast: new Date(prayer.time).getTime() < nowMs,
+      isCurrent: prayer.name === currentEntry?.name,
+    })),
+  };
+}
+
 export function formatCountdown(totalSeconds: number): string {
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);

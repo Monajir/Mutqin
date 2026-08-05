@@ -10,7 +10,7 @@ export function elevationStyle(level: ElevationKey) {
   return Platform.select({
     ios: {
       shadowColor: '#000',
-      shadowOpacity: 0.08 + value * 0.02,
+      shadowOpacity: 0.12 + value * 0.02,
       shadowRadius: value * 2,
       shadowOffset: { width: 0, height: value },
     },

@@ -6,4 +6,5 @@ export const quranKeys = {
     [...quranKeys.all, 'ayahRange', surahId, start, count] as const,
   lastRead: () => [...quranKeys.all, 'lastRead'] as const,
   search: (query: string) => [...quranKeys.all, 'search', query] as const,
+  dailyVerse: (dateKey: string) => [...quranKeys.all, 'dailyVerse', dateKey] as const,
 };

@@ -25,23 +25,33 @@ export function QuickActions() {
   const { tokens } = useAppTheme();
 
   return (
-    <HStack gap={3} wrap>
+    <HStack gap={2} justify="space-between">
       {actions.map((action) => (
         <Pressable
           key={action.label}
           onPress={() => router.push(action.route as never)}
           accessibilityRole="button"
           style={{
-            flexGrow: 1,
-            minWidth: '45%',
-            backgroundColor: tokens.background.secondary,
-            borderRadius: 12,
-            padding: 16,
+            width: 76,
+            alignItems: 'center',
           }}
         >
           <VStack gap={2} align="center">
-            <Icon name={action.icon} color="brand" />
-            <Text variant="bodySm" weight="600" align="center">
+            <HStack
+              align="center"
+              justify="center"
+              style={{
+                width: 54,
+                height: 54,
+                borderRadius: 27,
+                backgroundColor: tokens.background.elevated,
+                borderWidth: 1,
+                borderColor: tokens.border.strong,
+              }}
+            >
+              <Icon name={action.icon} color="brand" size={21} />
+            </HStack>
+            <Text variant="caption" weight="600" align="center" numberOfLines={1}>
               {action.label}
             </Text>
           </VStack>

@@ -21,16 +21,30 @@ export default function TabsLayout() {
           headerShown: false,
           tabBarActiveTintColor: tokens.brand.primary,
           tabBarInactiveTintColor: tokens.text.muted,
-          tabBarStyle: { backgroundColor: tokens.background.primary, borderTopColor: tokens.border.subtle },
+          tabBarLabelStyle: { fontSize: 10, fontWeight: '600', marginBottom: 6 },
+          tabBarItemStyle: { paddingTop: 7 },
+          tabBarStyle: {
+            position: 'absolute',
+            left: 14,
+            right: 14,
+            bottom: 12,
+            height: 66,
+            borderRadius: 24,
+            backgroundColor: tokens.background.elevated,
+            borderTopColor: tokens.border.strong,
+            borderWidth: 1,
+            borderColor: tokens.border.strong,
+            elevation: 12,
+          },
         }}
       >
         <Tabs.Screen
           name="index"
-          options={{ title: 'Home', tabBarIcon: ({ color, size }) => <Icon name="Home" color="primary" size={size} /> }}
+          options={{ title: 'Home', tabBarIcon: ({ color, size }) => <Icon name="Home" rawColor={color} size={size} /> }}
         />
         <Tabs.Screen
           name="quran/index"
-          options={{ title: 'Quran', tabBarIcon: ({ size }) => <Icon name="BookOpen" size={size} /> }}
+          options={{ title: 'Quran', tabBarIcon: ({ color, size }) => <Icon name="BookOpen" rawColor={color} size={size} /> }}
         />
         <Tabs.Screen
           name="quran/[surahId]"
@@ -38,7 +52,7 @@ export default function TabsLayout() {
         />
         <Tabs.Screen
           name="hifz/index"
-          options={{ title: 'Hifz', tabBarIcon: ({ size }) => <Icon name="Brain" size={size} /> }}
+          options={{ title: 'Hifz', tabBarIcon: ({ color, size }) => <Icon name="Brain" rawColor={color} size={size} /> }}
         />
         <Tabs.Screen
           name="hifz/session"
@@ -50,12 +64,17 @@ export default function TabsLayout() {
         />
         <Tabs.Screen
           name="prayer/index"
-          options={{ title: 'Prayer', tabBarIcon: ({ size }) => <Icon name="Clock" size={size} /> }}
+          options={{ title: 'Prayer', tabBarIcon: ({ color, size }) => <Icon name="Clock" rawColor={color} size={size} /> }}
         />
         <Tabs.Screen
           name="more/index"
-          options={{ title: 'More', tabBarIcon: ({ size }) => <Icon name="Menu" size={size} /> }}
+          options={{ title: 'More', tabBarIcon: ({ color, size }) => <Icon name="Menu" rawColor={color} size={size} /> }}
         />
+        <Tabs.Screen name="more/hadith/index" options={{ href: null }} />
+        <Tabs.Screen name="more/hadith/[collectionId]" options={{ href: null }} />
+        <Tabs.Screen name="more/duas" options={{ href: null }} />
+        <Tabs.Screen name="more/names" options={{ href: null }} />
+        <Tabs.Screen name="more/bookmarks" options={{ href: null }} />
       </Tabs>
       <AudioPlayerBar />
     </View>

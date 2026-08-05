@@ -108,11 +108,12 @@ export default function RootLayout() {
           persistOptions={{
             persister: queryPersister,
             // Discard caches created from the former three-surah demo dataset.
-            buster: 'quran-content-1.0.0-full',
+            buster: 'content-2026-07-31-library-with-names',
             // Quran reference data is already local in SQLite; persisting a
             // second copy can leave the UI showing an obsolete content pack.
             dehydrateOptions: {
-              shouldDehydrateQuery: (query) => query.queryKey[0] !== 'quran',
+              shouldDehydrateQuery: (query) =>
+                query.queryKey[0] !== 'quran' && query.queryKey[0] !== 'library',
             },
           }}
         >

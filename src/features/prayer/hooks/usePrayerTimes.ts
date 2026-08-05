@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import * as Location from 'expo-location';
 import { useQuery } from '@tanstack/react-query';
-import { calculatePrayerTimesForDay } from '../utils/prayerTimeCalculator';
+import { calculatePrayerTimesForDay, getLivePrayerTiming } from '../utils/prayerTimeCalculator';
 import { usePrayerSettingsStore } from '../store/usePrayerSettingsStore';
 
 interface Coordinates {
@@ -37,17 +37,18 @@ function useDeviceLocation(enabled: boolean) {
 
 /** Ticks every second so countdowns update live without a full query refetch. */
 function useClockTick(intervalMs = 1000) {
-  const [, forceRender] = useState(0);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
-    const id = setInterval(() => forceRender((n) => n + 1), intervalMs);
+    const id = setInterval(() => setNowMs(Date.now()), intervalMs);
     return () => clearInterval(id);
   }, [intervalMs]);
+  return nowMs;
 }
 
 export function usePrayerTimes() {
   const settings = usePrayerSettingsStore((s) => s.settings);
   const { coords, permissionDenied } = useDeviceLocation(settings.locationMode === 'auto');
-  useClockTick();
+  const nowMs = useClockTick();
 
   const fallbackCoords: Coordinates = { latitude: 21.4225, longitude: 39.8262 }; // Makkah, used only if location unavailable
   const effectiveCoords = coords ?? fallbackCoords;
@@ -59,5 +60,7 @@ export function usePrayerTimes() {
     staleTime: 60 * 1000,
   });
 
-  return { ...query, permissionDenied, usingFallbackLocation: !coords };
+  const liveData = query.data ? getLivePrayerTiming(query.data, nowMs) : undefined;
+
+  return { ...query, data: liveData, permissionDenied, usingFallbackLocation: !coords };
 }

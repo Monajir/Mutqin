@@ -8,6 +8,7 @@ export interface IconProps {
   name: IconName;
   size?: number;
   color?: 'primary' | 'secondary' | 'muted' | 'inverse' | 'brand';
+  rawColor?: string;
   strokeWidth?: number;
 }
 
@@ -15,7 +16,7 @@ export interface IconProps {
  * Single point of integration with the icon set. Swapping icon libraries
  * later touches only this file.
  */
-export function Icon({ name, size = 20, color = 'primary', strokeWidth = 2 }: IconProps) {
+export function Icon({ name, size = 20, color = 'primary', rawColor, strokeWidth = 2 }: IconProps) {
   const { tokens } = useAppTheme();
   const LucideIcon = LucideIcons[name] as React.ComponentType<{
     size?: number;
@@ -28,6 +29,6 @@ export function Icon({ name, size = 20, color = 'primary', strokeWidth = 2 }: Ic
     return null;
   }
 
-  const resolvedColor = color === 'brand' ? tokens.brand.primary : tokens.text[color];
+  const resolvedColor = rawColor ?? (color === 'brand' ? tokens.brand.primary : tokens.text[color]);
   return <LucideIcon size={size} color={resolvedColor} strokeWidth={strokeWidth} />;
 }

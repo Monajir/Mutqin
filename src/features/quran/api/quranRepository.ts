@@ -1,5 +1,6 @@
 import { getDb } from '@/services/storage/sqlite';
 import type { Ayah, Surah } from '@/types';
+import type { DailyQuranVerse } from '../types/quran.types';
 
 interface SurahRow {
   id: number;
@@ -16,6 +17,20 @@ interface AyahRow {
   text_arabic: string;
   text_translation: string;
   juz: number;
+}
+
+interface DailyVerseRow extends AyahRow {
+  name_translit: string;
+}
+
+const DAILY_VERSE_FILTER = `
+  LENGTH(TRIM(a.text_arabic)) BETWEEN 20 AND 220
+  AND LENGTH(TRIM(a.text_translation)) BETWEEN 20 AND 320
+`;
+
+function dayNumberFromDateKey(dateKey: string): number {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  return Math.floor(Date.UTC(year!, month! - 1, day!) / (24 * 60 * 60 * 1000));
 }
 
 function surahFromRow(row: SurahRow): Surah {
@@ -66,6 +81,38 @@ export const quranRepository = {
         like, like, limit
       )
       .map(ayahFromRow);
+  },
+
+  getDailyVerse(dateKey: string): DailyQuranVerse | null {
+    const db = getDb();
+    const count =
+      db.getFirstSync<{ count: number }>(
+        `SELECT COUNT(*) AS count
+         FROM ayahs a
+         WHERE ${DAILY_VERSE_FILTER};`
+      )?.count ?? 0;
+
+    if (count === 0) return null;
+
+    const offset = ((dayNumberFromDateKey(dateKey) % count) + count) % count;
+    const row = db.getFirstSync<DailyVerseRow>(
+      `SELECT a.*, s.name_translit
+       FROM ayahs a
+       JOIN surahs s ON s.id = a.surah_id
+       WHERE ${DAILY_VERSE_FILTER}
+       ORDER BY a.surah_id, a.ayah_number
+       LIMIT 1 OFFSET ?;`,
+      offset
+    );
+
+    if (!row) return null;
+    return {
+      surahId: row.surah_id,
+      ayahNumber: row.ayah_number,
+      arabic: row.text_arabic,
+      translation: row.text_translation,
+      reference: `${row.name_translit} ${row.surah_id}:${row.ayah_number}`,
+    };
   },
 };
 

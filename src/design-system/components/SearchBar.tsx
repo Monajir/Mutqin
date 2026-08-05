@@ -45,6 +45,8 @@ export function SearchBar({
         borderRadius: radii.md,
         paddingHorizontal: spacing[3],
         height: 44,
+        borderWidth: 1,
+        borderColor: tokens.border.subtle,
       }}
     >
       <Icon name="Search" size={18} color="muted" />

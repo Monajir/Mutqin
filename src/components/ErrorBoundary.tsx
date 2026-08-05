@@ -18,19 +18,19 @@ interface ErrorBoundaryState {
  * own instance so one feature crashing doesn't take down the whole tab shell.
  */
 export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { hasError: false };
+  override state: ErrorBoundaryState = { hasError: false };
 
   static getDerivedStateFromError(): ErrorBoundaryState {
     return { hasError: true };
   }
 
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
+  override componentDidCatch(error: Error, info: React.ErrorInfo) {
     reportError(error, { componentStack: info.componentStack ?? undefined });
   }
 
   reset = () => this.setState({ hasError: false });
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       return (
         <ScreenWrapper>

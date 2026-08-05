@@ -28,11 +28,47 @@ export function ScreenWrapper({
 }: ScreenWrapperProps) {
   const { tokens } = useAppTheme();
 
-  const paddingStyle: ViewStyle = { paddingHorizontal: spacing[4], flexGrow: 1 };
+  const paddingStyle: ViewStyle = {
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[12] + spacing[10],
+    flexGrow: 1,
+  };
+  const atmosphere = (
+    <View
+      pointerEvents="none"
+      style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, overflow: 'hidden' }}
+    >
+      <View
+        style={{
+          position: 'absolute',
+          width: 260,
+          height: 260,
+          borderRadius: 130,
+          top: -170,
+          right: -80,
+          backgroundColor: tokens.brand.primary,
+          opacity: 0.14,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          width: 220,
+          height: 220,
+          borderRadius: 110,
+          top: 130,
+          left: -180,
+          backgroundColor: tokens.semantic.info,
+          opacity: 0.08,
+        }}
+      />
+    </View>
+  );
 
   if (scroll) {
     return (
       <SafeAreaView edges={edges} style={{ flex: 1, backgroundColor: tokens.background.primary }}>
+        {atmosphere}
         <ScrollView
           contentContainerStyle={[paddingStyle, contentStyle]}
           keyboardShouldPersistTaps="handled"
@@ -50,6 +86,7 @@ export function ScreenWrapper({
 
   return (
     <SafeAreaView edges={edges} style={{ flex: 1, backgroundColor: tokens.background.primary }}>
+      {atmosphere}
       <View style={[paddingStyle, contentStyle]}>{children}</View>
     </SafeAreaView>
   );
