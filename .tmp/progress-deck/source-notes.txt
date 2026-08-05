@@ -1,0 +1,10 @@
+Slide 1: Project title and date are based on the local Mutqin repository and current workspace date.
+Slide 2: Current-state claims are based on app routes, feature modules, app.config.js, and the inspected backend/service configuration.
+Slide 3: Feature claims are based on src/features/quran, src/features/library, src/features/bookmarks, src/features/prayer, src/features/home, and src/features/settings.
+Slide 4: Content counts were queried directly from assets/db/quran-content.db on 2026-08-05.
+Slide 5: Architecture summary is based on src/services/storage, src/services/ai, src/config/di.ts, React Query, Zustand, SQLite, and MMKV usage in the repository.
+Slide 6: Hifz status is based on src/features/hifz and mutqin-ai-service. The service exists locally but is not yet production deployed or hardened.
+Slide 7: TypeScript compilation, SQLite integrity, content counts, and two standalone AI scoring tests were run locally on 2026-08-05.
+Slide 8: Remaining gaps are based on repository inspection: placeholder API host, incomplete sync/auth backend, unresolved recitation audio host, notification scheduling, lint configuration, and AI-service hardening needs.
+Slide 9: Roadmap is a recommended sequence derived from current dependencies and project state.
+Slide 10: Recommendation synthesizes the preceding local evidence; no external claims are used.

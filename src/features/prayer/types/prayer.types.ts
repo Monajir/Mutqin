@@ -13,6 +13,8 @@ export interface PrayerTimesForDay {
   currentPrayer: PrayerName | null;
   nextPrayer: PrayerName;
   nextPrayerCountdownSec: number;
+  source: 'aladhan' | 'offline-calculation';
+  timezone?: string;
 }
 
 export interface QiblaDirection {

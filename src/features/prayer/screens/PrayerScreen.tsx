@@ -26,6 +26,11 @@ export function PrayerScreen() {
             <Text variant="bodySm" color="secondary">
               {usingFallbackLocation ? 'Default location · Enable location for accuracy' : 'Based on your location'}
             </Text>
+            {data ? (
+              <Text variant="caption" color="muted">
+                {data.source === 'aladhan' ? 'AlAdhan live timings' : 'Offline calculated timings'}
+              </Text>
+            ) : null}
           </VStack>
           <Icon name="MapPin" color="brand" size={21} />
         </HStack>
