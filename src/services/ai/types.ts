@@ -3,7 +3,7 @@ export interface AyahReference {
   ayahNumber: number;
 }
 
-export type WordEvaluationStatus = 'correct' | 'pronunciation_warning' | 'incorrect' | 'skipped';
+export type WordEvaluationStatus = 'correct' | 'incorrect' | 'skipped';
 
 export interface WordEvaluation {
   wordIndex: number;
@@ -23,7 +23,6 @@ export interface RecitationEvaluationResult {
   correctWordCount: number;
   missedWordCount: number;
   incorrectWordCount: number;
-  pronunciationWarningCount: number;
   suggestedRevisionAyahs: AyahReference[];
 }
 
@@ -32,19 +31,14 @@ export interface EvaluateRecitationInput {
   audioUri: string;
   /** The ayah range the user was expected to recite, in order. */
   expectedAyahs: AyahReference[];
-  qariIdForReference?: string;
 }
 
-/**
- * Streamed partial result, used to progressively reveal words as recitation
- * is processed rather than waiting for the full evaluation to complete.
- */
-export interface PartialEvaluationUpdate {
-  ayah: AyahReference;
-  word: WordEvaluation;
-}
-
-export type EvaluationFailureReason = 'network_error' | 'timeout' | 'low_confidence' | 'unknown';
+export type EvaluationFailureReason =
+  | 'network_error'
+  | 'timeout'
+  | 'validation_error'
+  | 'service_unavailable'
+  | 'unknown';
 
 export class RecitationEvaluationError extends Error {
   readonly reason: EvaluationFailureReason;

@@ -11,7 +11,7 @@ export const colors = {
     semantic: { success: '#2E7D32', warning: '#B8860B', error: '#C0392B', info: '#2C6E8E' },
     border: { subtle: '#DDE7E7', strong: '#BFCFCF' },
     overlay: 'rgba(0,0,0,0.4)',
-    hifz: { correct: '#2E7D32', pronunciation: '#B8860B', incorrect: '#C0392B', hidden: '#CFC9BF' },
+    hifz: { correct: '#2E7D32', incorrect: '#C0392B', hidden: '#CFC9BF' },
   },
   dark: {
     background: { primary: '#09131F', secondary: '#111F2D', elevated: '#182838' },
@@ -20,7 +20,7 @@ export const colors = {
     semantic: { success: '#54C784', warning: '#E0B763', error: '#F07575', info: '#62B5D8' },
     border: { subtle: '#223545', strong: '#385064' },
     overlay: 'rgba(0,0,0,0.6)',
-    hifz: { correct: '#54C784', pronunciation: '#E0B763', incorrect: '#F07575', hidden: '#385064' },
+    hifz: { correct: '#54C784', incorrect: '#F07575', hidden: '#385064' },
   },
 } as const;
 

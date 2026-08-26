@@ -25,10 +25,9 @@ function rowToEntry(row: HifzProgressRow): HifzProgressEntry {
 
 /**
  * Local-first data access for Hifz progress. All reads/writes hit SQLite
- * directly and are the source of truth offline; a background sync worker
- * (see useSyncQueueStore + services/api) reconciles with the server when
- * connectivity is available. Feature hooks/screens must go through this
- * repository rather than querying `getDb()` directly.
+ * directly and are the source of truth offline. Cloud sync is intentionally
+ * deferred until authentication and conflict rules exist. Feature hooks and
+ * screens go through this repository rather than querying SQLite directly.
  */
 export const hifzRepository = {
   getAllProgress(): HifzProgressEntry[] {

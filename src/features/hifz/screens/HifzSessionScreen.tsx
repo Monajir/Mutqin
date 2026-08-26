@@ -12,23 +12,21 @@ import { VerseRevealer } from '../components/VerseRevealer';
 import { RecordButton } from '../components/RecordButton';
 import { EmptyState } from '@/components';
 
-const LOOKAHEAD_AYAH_COUNT = 15;
-
 /**
- * Wireframe screen 05 — the flagship AI Hifz Assistant recitation view.
+ * Wireframe screen 05 — the main AI Hifz Assistant recitation view.
  * Renders already-passed ayahs normally and the active ayah obscured/
  * progressively revealed via VerseRevealer, per spec §6.
  */
 export function HifzSessionScreen() {
   const router = useRouter();
-  const { surahId, startAyah, revealedWords, phase, result } = useHifzSessionStore();
+  const { surahId, startAyah, endAyah, revealedWords, phase, result } = useHifzSessionStore();
 
-  const expectedAyahs = useMemo(() => {
-    if (surahId === null || startAyah === null) return [];
-    return Array.from({ length: LOOKAHEAD_AYAH_COUNT }, (_, i) => ({ surahId, ayahNumber: startAyah + i }));
-  }, [surahId, startAyah]);
-
-  const { data: ayahs } = useAyahRange(surahId, startAyah, LOOKAHEAD_AYAH_COUNT);
+  const ayahCount = startAyah !== null && endAyah !== null ? endAyah - startAyah + 1 : 0;
+  const { data: ayahs } = useAyahRange(surahId, startAyah, ayahCount);
+  const expectedAyahs = useMemo(
+    () => ayahs?.map((ayah) => ({ surahId: ayah.surahId, ayahNumber: ayah.ayahNumber })) ?? [],
+    [ayahs]
+  );
   const session = useHifzSession(expectedAyahs);
 
   React.useEffect(() => {
@@ -37,7 +35,7 @@ export function HifzSessionScreen() {
     }
   }, [phase, result, router]);
 
-  if (surahId === null || startAyah === null) {
+  if (surahId === null || startAyah === null || endAyah === null) {
     return (
       <ScreenWrapper>
         <EmptyState variant="no-data" title="No active session" description="Start a new Hifz session from the Hifz tab." />
@@ -61,7 +59,7 @@ export function HifzSessionScreen() {
     <ScreenWrapper scroll>
       <VStack gap={5} style={{ paddingTop: 16, flex: 1 }}>
         <Text variant="bodySm" color="secondary">
-          {`Surah ${activeAyah.surahId} · Ayah ${activeAyah.ayahNumber} onward`}
+          {`Surah ${activeAyah.surahId} · Ayahs ${startAyah}–${endAyah}`}
         </Text>
 
         <VerseRevealer
@@ -83,7 +81,7 @@ export function HifzSessionScreen() {
         <VStack align="center" style={{ marginTop: 'auto', paddingVertical: 24 }}>
           <RecordButton
             isRecording={session.isRecording}
-            disabled={session.isEvaluating}
+            disabled={session.isEvaluating || expectedAyahs.length === 0}
             onPressIn={session.startHolding}
             onPressOut={session.releaseAndEvaluate}
             durationSec={session.durationSec}

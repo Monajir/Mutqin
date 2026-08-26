@@ -16,7 +16,7 @@ export interface VerseRevealerProps {
 /**
  * Core visual of the AI Hifz Assistant (spec §6): the target ayah starts
  * hidden, and correctly recited words are progressively revealed with
- * color-coded status (correct/pronunciation warning/incorrect). Previous
+ * color-coded status (correct/incorrect/skipped). Previous
  * (already-passed) ayahs are rendered normally by the parent screen using
  * plain `ArabicText`; this component only renders the "active" ayah.
  */
@@ -45,8 +45,6 @@ export function VerseRevealer({ fullText, revealedWords, totalWordCount }: Verse
     switch (status) {
       case 'correct':
         return tokens.hifz.correct;
-      case 'pronunciation_warning':
-        return tokens.hifz.pronunciation;
       case 'incorrect':
       case 'skipped':
         return tokens.hifz.incorrect;

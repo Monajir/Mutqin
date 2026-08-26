@@ -1,58 +1,51 @@
-import { useCallback } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useHifzSessionStore } from '../store/useHifzSessionStore';
 import { useRecitationRecorder } from './useRecitationRecorder';
-import { useApplyEvaluationResult } from '../api/hifzMutations';
-import { hifzRepository } from '../api/hifzRepository';
 import { hifzEvaluationProvider } from '@/config/di';
 import { RecitationEvaluationError } from '@/services/ai/types';
 import type { AyahReference } from '@/services/ai/types';
 import { useToast } from '@/design-system/components';
 
 /**
- * Orchestrates one full Hifz Assistant recitation cycle: record -> submit to
- * the injected AI provider -> apply resulting status updates -> transition
- * to the summary phase. This is the primary hook `HifzSessionScreen` binds
- * to; it intentionally does not know which concrete AI vendor is behind
- * `hifzEvaluationProvider` (§9, §19 of the architecture doc).
+ * Orchestrates record -> evaluate -> review. Evaluation results are not
+ * written to progress here; the user explicitly accepts them on the summary.
  */
 export function useHifzSession(expectedAyahs: AyahReference[]) {
-  const { isRecording, setRecording, completeWithResult, surahId, startAyah } = useHifzSessionStore();
+  const { isRecording, setRecording, completeWithResult } = useHifzSessionStore();
   const recorder = useRecitationRecorder();
-  const applyEvaluation = useApplyEvaluationResult();
   const toast = useToast();
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const startPromiseRef = useRef<Promise<boolean> | null>(null);
 
   const startHolding = useCallback(async () => {
-    setRecording(true);
-    await recorder.startRecording();
+    const startPromise = recorder.startRecording();
+    startPromiseRef.current = startPromise;
+    const started = await startPromise;
+    if (started) setRecording(true);
   }, [recorder, setRecording]);
 
   const releaseAndEvaluate = useCallback(async () => {
+    const started = await startPromiseRef.current;
+    startPromiseRef.current = null;
     setRecording(false);
+    if (!started) return;
     const audioUri = await recorder.stopRecording();
     if (!audioUri) return;
 
+    setIsEvaluating(true);
     try {
       const result = await hifzEvaluationProvider.evaluateRecitation({ audioUri, expectedAyahs });
       completeWithResult(result);
-      await applyEvaluation.mutateAsync(result);
-
-      if (surahId !== null && startAyah !== null) {
-        hifzRepository.saveSession({
-          id: `${surahId}-${startAyah}-${Date.now()}`,
-          surahId,
-          startAyah,
-          endAyah: expectedAyahs.at(-1)?.ayahNumber ?? null,
-          overallAccuracy: result.overallAccuracy,
-        });
-      }
     } catch (err) {
       const message =
         err instanceof RecitationEvaluationError
           ? err.message
           : 'Could not evaluate your recitation. Please try again.';
       toast.show(message, 'error');
+    } finally {
+      setIsEvaluating(false);
     }
-  }, [recorder, expectedAyahs, completeWithResult, applyEvaluation, surahId, startAyah, toast]);
+  }, [recorder, expectedAyahs, completeWithResult, setRecording, toast]);
 
   return {
     isRecording,
@@ -62,6 +55,6 @@ export function useHifzSession(expectedAyahs: AyahReference[]) {
     startHolding,
     releaseAndEvaluate,
     cancelRecording: recorder.cancelRecording,
-    isEvaluating: applyEvaluation.isPending,
+    isEvaluating,
   };
 }

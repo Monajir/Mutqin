@@ -6,7 +6,7 @@ export type RecorderStatus = 'idle' | 'recording' | 'stopping' | 'error';
 interface UseRecitationRecorderResult {
   status: RecorderStatus;
   durationSec: number;
-  startRecording: () => Promise<void>;
+  startRecording: () => Promise<boolean>;
   stopRecording: () => Promise<string | null>; // returns local file URI
   cancelRecording: () => Promise<void>;
   errorMessage: string | null;
@@ -24,14 +24,14 @@ export function useRecitationRecorder(): UseRecitationRecorderResult {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
 
-  const startRecording = useCallback(async () => {
+  const startRecording = useCallback(async (): Promise<boolean> => {
     try {
       setErrorMessage(null);
       const permission = await Audio.requestPermissionsAsync();
       if (!permission.granted) {
         setStatus('error');
         setErrorMessage('Microphone permission is required to use the Hifz Assistant.');
-        return;
+        return false;
       }
 
       await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
@@ -42,9 +42,11 @@ export function useRecitationRecorder(): UseRecitationRecorderResult {
 
       recordingRef.current = recording;
       setStatus('recording');
+      return true;
     } catch (err) {
       setStatus('error');
       setErrorMessage(err instanceof Error ? err.message : 'Could not start recording.');
+      return false;
     }
   }, []);
 

@@ -1,5 +1,5 @@
 import type { HifzEvaluationProvider } from '@/services/ai/hifzEvaluationProvider';
-import { OpenAICompatibleHifzEvaluationProvider } from '@/services/ai/providers/openaiCompatibleProvider';
+import { MutqinApiHifzEvaluationProvider } from '@/services/ai/providers/mutqinApiProvider';
 
 /**
  * Composition root. This is the ONLY file that should ever import a
@@ -9,4 +9,4 @@ import { OpenAICompatibleHifzEvaluationProvider } from '@/services/ai/providers/
  * offline queuing), instantiate it here and pick between them here, not in
  * feature code.
  */
-export const hifzEvaluationProvider: HifzEvaluationProvider = new OpenAICompatibleHifzEvaluationProvider();
+export const hifzEvaluationProvider: HifzEvaluationProvider = new MutqinApiHifzEvaluationProvider();

@@ -9,11 +9,16 @@ import { AccuracySummaryCard } from '../components/AccuracySummaryCard';
 import { useHifzSessionStore } from '../store/useHifzSessionStore';
 import { EmptyState } from '@/components';
 import { HIFZ_STATUS_LABELS } from '../constants/hifz.constants';
+import { useApplyEvaluationResult } from '../api/hifzMutations';
+import { hifzRepository } from '../api/hifzRepository';
+import { useToast } from '@/design-system/components';
 
 /** Wireframe screen 06 — session results with actionable next steps. */
 export function HifzSummaryScreen() {
   const router = useRouter();
-  const { result, retrySameRange, reset } = useHifzSessionStore();
+  const { result, retrySameRange, reset, surahId, startAyah } = useHifzSessionStore();
+  const applyEvaluation = useApplyEvaluationResult();
+  const toast = useToast();
 
   if (!result) {
     return (
@@ -59,9 +64,24 @@ export function HifzSummaryScreen() {
         <Button
           label="Accept & Continue"
           fullWidth
-          onPress={() => {
-            reset();
-            router.dismissAll();
+          loading={applyEvaluation.isPending}
+          onPress={async () => {
+            try {
+              await applyEvaluation.mutateAsync(result);
+              if (surahId !== null && startAyah !== null) {
+                hifzRepository.saveSession({
+                  id: `${surahId}-${startAyah}-${Date.now()}`,
+                  surahId,
+                  startAyah,
+                  endAyah: result.ayahs.at(-1)?.ayah.ayahNumber ?? null,
+                  overallAccuracy: result.overallAccuracy,
+                });
+              }
+              reset();
+              router.dismissAll();
+            } catch {
+              toast.show('Could not save this result. Please try again.', 'error');
+            }
           }}
         />
       </VStack>

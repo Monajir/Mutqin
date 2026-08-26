@@ -11,10 +11,10 @@ def test_session():
     # else correctly straight through into ayah 4. A naive per-ayah word-count
     # split would misalign every subsequent word.
     recognized = [
-        RecognizedWord("الرَّحِيمِ", 0.9),   # only said the 2nd word of ayah 3
-        RecognizedWord("مَالِكِ", 0.9),
-        RecognizedWord("يَوْمِ", 0.9),
-        RecognizedWord("الدِّينِ", 0.9),
+        RecognizedWord("الرَّحِيمِ"),   # only said the 2nd word of ayah 3
+        RecognizedWord("مَالِكِ"),
+        RecognizedWord("يَوْمِ"),
+        RecognizedWord("الدِّينِ"),
     ]
 
     results = score_session([ayah3, ayah4], recognized)
@@ -32,4 +32,3 @@ def test_session():
         f"boundary shift bug: ayah 4 got corrupted by the skip in ayah 3: {results[1].words}"
 
     print("\n✅ Multi-ayah session alignment correctly isolated the skip to ayah 3 only.")
-

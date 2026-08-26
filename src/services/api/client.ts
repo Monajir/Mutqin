@@ -1,8 +1,7 @@
-import Constants from 'expo-constants';
 import { ApiError } from './errors';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { env } from '@/config/env';
 
-const API_BASE_URL = (Constants.expoConfig?.extra?.apiBaseUrl as string) ?? 'https://api.mutqin.app/v1';
 const DEFAULT_TIMEOUT_MS = 15000;
 
 export interface RequestOptions {
@@ -16,7 +15,7 @@ export interface RequestOptions {
 }
 
 function buildUrl(path: string, query?: RequestOptions['query']): string {
-  const url = new URL(`${API_BASE_URL}${path}`);
+  const url = new URL(`${env.apiBaseUrl.replace(/\/$/, '')}${path}`);
   if (query) {
     for (const [key, value] of Object.entries(query)) {
       if (value !== undefined) url.searchParams.set(key, String(value));

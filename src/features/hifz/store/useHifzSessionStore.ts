@@ -6,13 +6,14 @@ interface HifzSessionState {
   phase: HifzSessionPhase;
   surahId: number | null;
   startAyah: number | null;
+  endAyah: number | null;
   currentAyahIndex: number;
   revealedWords: Record<string, WordEvaluation[]>; // key: "surahId-ayahNumber"
   result: RecitationEvaluationResult | null;
   isRecording: boolean;
 
   startSetup: () => void;
-  beginSession: (surahId: number, startAyah: number) => void;
+  beginSession: (surahId: number, startAyah: number, endAyah: number) => void;
   setRecording: (recording: boolean) => void;
   revealWord: (ayah: AyahReference, word: WordEvaluation) => void;
   completeWithResult: (result: RecitationEvaluationResult) => void;
@@ -33,6 +34,7 @@ export const useHifzSessionStore = create<HifzSessionState>((set, get) => ({
   phase: 'setup',
   surahId: null,
   startAyah: null,
+  endAyah: null,
   currentAyahIndex: 0,
   revealedWords: {},
   result: null,
@@ -40,8 +42,8 @@ export const useHifzSessionStore = create<HifzSessionState>((set, get) => ({
 
   startSetup: () => set({ phase: 'setup' }),
 
-  beginSession: (surahId, startAyah) =>
-    set({ phase: 'reciting', surahId, startAyah, currentAyahIndex: 0, revealedWords: {}, result: null }),
+  beginSession: (surahId, startAyah, endAyah) =>
+    set({ phase: 'reciting', surahId, startAyah, endAyah, currentAyahIndex: 0, revealedWords: {}, result: null }),
 
   setRecording: (recording) => set({ isRecording: recording }),
 
@@ -55,5 +57,5 @@ export const useHifzSessionStore = create<HifzSessionState>((set, get) => ({
 
   retrySameRange: () => set({ phase: 'reciting', currentAyahIndex: 0, revealedWords: {}, result: null }),
 
-  reset: () => set({ phase: 'setup', surahId: null, startAyah: null, currentAyahIndex: 0, revealedWords: {}, result: null, isRecording: false }),
+  reset: () => set({ phase: 'setup', surahId: null, startAyah: null, endAyah: null, currentAyahIndex: 0, revealedWords: {}, result: null, isRecording: false }),
 }));

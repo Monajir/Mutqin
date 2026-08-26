@@ -1,4 +1,4 @@
-import type { EvaluateRecitationInput, PartialEvaluationUpdate, RecitationEvaluationResult } from './types';
+import type { EvaluateRecitationInput, RecitationEvaluationResult } from './types';
 
 /**
  * The single interface the Hifz feature is allowed to depend on for
@@ -10,12 +10,10 @@ import type { EvaluateRecitationInput, PartialEvaluationUpdate, RecitationEvalua
  */
 export interface HifzEvaluationProvider {
   /**
-   * Evaluates a recorded recitation against the expected ayahs. Emits
-   * partial word-level updates as they become available (for progressive
-   * reveal), and resolves with the full result once evaluation completes.
+   * Evaluates one complete recorded recitation against a consecutive ayah
+   * range. Streaming is deliberately out of scope for the first version.
    */
   evaluateRecitation(
-    input: EvaluateRecitationInput,
-    onPartialUpdate?: (update: PartialEvaluationUpdate) => void
+    input: EvaluateRecitationInput
   ): Promise<RecitationEvaluationResult>;
 }

@@ -1,188 +1,178 @@
-"""
-Mutqin Hifz Assistant evaluation service.
-
-Implements POST /hifz/evaluate matching the wire contract already defined
-by the frontend (src/services/ai/providers/openaiCompatibleProvider.ts):
-
-  Request  : multipart/form-data
-             - audio: file (m4a)
-             - expectedAyahs: JSON string, [{ "surahId": int, "ayahNumber": int }, ...]
-             - qariId: optional string (unused by this implementation — reserved
-               for a future per-Qari pronunciation reference comparison)
-
-  Response : { "result": RecitationEvaluationResult }  — same camelCase
-             shape as src/services/ai/types.ts, so the frontend needs ZERO
-             changes to consume this. This service is the entire missing
-             piece from the app's DI graph (services/ai/hifzEvaluationProvider.ts).
-
-Run:
-  uvicorn app.main:app --host 0.0.0.0 --port 8000
-
-Requires the SAME quran-content.db the ingestion script produces (see
-mutqin-content-ingestion/) — this service reads canonical ayah text from
-it, and it MUST be the same content the app itself ships, or word-level
-comparison will be scored against a different text than what the user
-is looking at on screen.
-"""
 import json
+import logging
 import os
-import sqlite3
 import tempfile
 from contextlib import asynccontextmanager
+from uuid import uuid4
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from pydantic import BaseModel
+from pydantic import TypeAdapter, ValidationError
+from starlette.concurrency import run_in_threadpool
 
-from app.scoring import RecognizedWord, aggregate_result, score_session
+from app.asr import WhisperRecitationTranscriber
+from app.config import settings
+from app.quran_repository import QuranRepository, QuranRepositoryError
+from app.schemas import (
+    AyahEvaluationDto,
+    AyahReferenceDto,
+    EvaluateResponseDto,
+    HealthResponseDto,
+    RecitationEvaluationResultDto,
+    WordEvaluationDto,
+)
+from app.scoring import aggregate_result, score_session
 
-QURAN_DB_PATH = os.environ.get("QURAN_DB_PATH", "./data/quran-content.db")
-DEVICE = os.environ.get("ASR_DEVICE", "cuda")
-
-_asr = None  # loaded lazily in the lifespan handler below
+logger = logging.getLogger(__name__)
+AYAH_LIST_ADAPTER = TypeAdapter(list[AyahReferenceDto])
+SUPPORTED_AUDIO_TYPES = {
+    "audio/m4a",
+    "audio/mp4",
+    "audio/x-m4a",
+    "audio/mpeg",
+    "audio/wav",
+    "audio/x-wav",
+    "audio/3gpp",
+    "application/octet-stream",
+}
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _asr
-    if _asr is not None:
-        # Already set (e.g. by a test injecting a fake ASR before startup) —
-        # don't clobber it with a real model load.
-        yield
-        return
+    repository = QuranRepository(settings.quran_db_path)
+    app.state.quran_repository = repository
 
-    from app.asr import ArabicRecitationASR
-
-    print(f"Loading ASR model onto device={DEVICE}...")
-    _asr = ArabicRecitationASR(device=DEVICE)
-    print("ASR model loaded.")
+    # Tests may inject a fake transcriber before startup. Production loads the
+    # configured model once and reuses it for every request.
+    if getattr(app.state, "transcriber", None) is None and repository.is_ready():
+        logger.info("Loading recitation model %s on %s", settings.asr_model_id, settings.asr_device)
+        app.state.transcriber = WhisperRecitationTranscriber(
+            model_id=settings.asr_model_id,
+            device=settings.asr_device,
+        )
     yield
 
 
-app = FastAPI(title="Mutqin Hifz Evaluation Service", lifespan=lifespan)
+app = FastAPI(
+    title="Mutqin Backend",
+    version="1.0.0",
+    description="Minimal backend for Quran recitation evaluation.",
+    lifespan=lifespan,
+)
 
 
-# --- Pydantic response models, field-for-field matching the TS types ------
+def parse_expected_ayahs(raw_value: str) -> list[AyahReferenceDto]:
+    try:
+        references = AYAH_LIST_ADAPTER.validate_python(json.loads(raw_value))
+    except (json.JSONDecodeError, ValidationError) as error:
+        raise HTTPException(status_code=400, detail="expectedAyahs is invalid.") from error
 
-class AyahReferenceDto(BaseModel):
-    surahId: int
-    ayahNumber: int
-
-
-class WordEvaluationDto(BaseModel):
-    wordIndex: int
-    text: str
-    status: str
-
-
-class AyahEvaluationDto(BaseModel):
-    ayah: AyahReferenceDto
-    words: list[WordEvaluationDto]
-    isFullyRecited: bool
-
-
-class RecitationEvaluationResultDto(BaseModel):
-    ayahs: list[AyahEvaluationDto]
-    overallAccuracy: float
-    correctWordCount: int
-    missedWordCount: int
-    incorrectWordCount: int
-    pronunciationWarningCount: int
-    suggestedRevisionAyahs: list[AyahReferenceDto]
-
-
-class EvaluateResponseDto(BaseModel):
-    result: RecitationEvaluationResultDto
-
-
-# --- Canonical text lookup -------------------------------------------------
-
-def fetch_canonical_ayahs(expected: list[dict]) -> list[tuple[int, int, list[str]]]:
-    """Reads canonical ayah text from the shared quran-content.db (same DB the app ships)."""
-    if not os.path.exists(QURAN_DB_PATH):
+    if not references:
+        raise HTTPException(status_code=400, detail="Select at least one ayah.")
+    if len(references) > settings.max_ayahs_per_evaluation:
         raise HTTPException(
-            status_code=500,
-            detail=f"Quran content database not found at {QURAN_DB_PATH}. "
-            "Run the ingestion script and set QURAN_DB_PATH.",
+            status_code=400,
+            detail=f"A session may contain at most {settings.max_ayahs_per_evaluation} ayahs.",
         )
 
-    conn = sqlite3.connect(QURAN_DB_PATH)
-    result = []
+    first_surah = references[0].surahId
+    for index, reference in enumerate(references):
+        if reference.surahId != first_surah:
+            raise HTTPException(status_code=400, detail="A session must stay within one surah.")
+        if index > 0 and reference.ayahNumber != references[index - 1].ayahNumber + 1:
+            raise HTTPException(status_code=400, detail="Ayahs must be consecutive and in reading order.")
+    return references
+
+
+async def save_upload(audio: UploadFile) -> str:
+    if audio.content_type not in SUPPORTED_AUDIO_TYPES:
+        raise HTTPException(status_code=415, detail="Unsupported audio format.")
+
+    suffix = os.path.splitext(audio.filename or "recitation.m4a")[1].lower() or ".m4a"
+    total_bytes = 0
+    temporary = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
     try:
-        for ref in expected:
-            row = conn.execute(
-                "SELECT text_arabic FROM ayahs WHERE surah_id = ? AND ayah_number = ?",
-                (ref["surahId"], ref["ayahNumber"]),
-            ).fetchone()
-            if row is None:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Ayah {ref['surahId']}:{ref['ayahNumber']} not found in content database.",
-                )
-            result.append((ref["surahId"], ref["ayahNumber"], row[0].split()))
+        while chunk := await audio.read(1024 * 1024):
+            total_bytes += len(chunk)
+            if total_bytes > settings.max_upload_bytes:
+                raise HTTPException(status_code=413, detail="Audio recording is too large.")
+            temporary.write(chunk)
+        if total_bytes == 0:
+            raise HTTPException(status_code=400, detail="Audio recording is empty.")
+        return temporary.name
+    except Exception:
+        temporary.close()
+        os.unlink(temporary.name)
+        raise
     finally:
-        conn.close()
-    return result
+        temporary.close()
 
 
-# --- Endpoint ---------------------------------------------------------------
+@app.get("/health/live", response_model=HealthResponseDto)
+async def health_live():
+    return HealthResponseDto(status="ok")
 
-@app.post("/hifz/evaluate", response_model=EvaluateResponseDto)
+
+@app.get("/health/ready", response_model=HealthResponseDto)
+async def health_ready():
+    repository = app.state.quran_repository
+    database_ready = repository.is_ready()
+    model_ready = getattr(app.state, "transcriber", None) is not None
+    if not database_ready or not model_ready:
+        raise HTTPException(status_code=503, detail="Evaluation service is not ready.")
+    return HealthResponseDto(status="ready", databaseReady=True, modelReady=True)
+
+
+@app.post(f"{settings.api_prefix}/hifz/evaluate", response_model=EvaluateResponseDto)
 async def evaluate_recitation(
     audio: UploadFile = File(...),
     expectedAyahs: str = Form(...),
-    qariId: str | None = Form(default=None),
 ):
+    repository: QuranRepository = app.state.quran_repository
+    transcriber = getattr(app.state, "transcriber", None)
+    if not repository.is_ready() or transcriber is None:
+        raise HTTPException(status_code=503, detail="Evaluation service is not ready.")
+
+    references = parse_expected_ayahs(expectedAyahs)
     try:
-        expected = json.loads(expectedAyahs)
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="expectedAyahs must be valid JSON.")
+        canonical_ayahs = repository.fetch_canonical_ayahs(references)
+    except QuranRepositoryError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
-    if not isinstance(expected, list) or len(expected) == 0:
-        raise HTTPException(status_code=400, detail="expectedAyahs must be a non-empty array.")
-
-    canonical_ayahs = fetch_canonical_ayahs(expected)
-
-    # Persist the upload to a temp file — the ASR/audio-decoding libraries
-    # need a real file path, not an in-memory stream.
-    suffix = os.path.splitext(audio.filename or "recitation.m4a")[1] or ".m4a"
-    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-        tmp.write(await audio.read())
-        tmp_path = tmp.name
-
+    temporary_path = await save_upload(audio)
     try:
-        transcribed = _asr.transcribe(tmp_path)
-        recognized_words = [RecognizedWord(text=w.text, confidence=w.confidence) for w in transcribed]
-
+        recognized_words = await run_in_threadpool(transcriber.transcribe, temporary_path)
         ayah_evaluations = score_session(canonical_ayahs, recognized_words)
         result = aggregate_result(ayah_evaluations)
+    except HTTPException:
+        raise
+    except Exception as error:
+        logger.exception("Recitation evaluation failed")
+        raise HTTPException(status_code=503, detail="Recitation evaluation failed.") from error
     finally:
-        os.unlink(tmp_path)
+        os.unlink(temporary_path)
 
     return EvaluateResponseDto(
+        evaluationId=str(uuid4()),
+        modelVersion=transcriber.model_version,
         result=RecitationEvaluationResultDto(
             ayahs=[
                 AyahEvaluationDto(
-                    ayah=AyahReferenceDto(surahId=a.surah_id, ayahNumber=a.ayah_number),
+                    ayah=AyahReferenceDto(surahId=ayah.surah_id, ayahNumber=ayah.ayah_number),
                     words=[
-                        WordEvaluationDto(wordIndex=w.word_index, text=w.text, status=w.status.value)
-                        for w in a.words
+                        WordEvaluationDto(wordIndex=word.word_index, text=word.text, status=word.status)
+                        for word in ayah.words
                     ],
-                    isFullyRecited=a.is_fully_recited,
+                    isFullyRecited=ayah.is_fully_recited,
                 )
-                for a in ayah_evaluations
+                for ayah in ayah_evaluations
             ],
             overallAccuracy=result.overall_accuracy,
             correctWordCount=result.correct_word_count,
             missedWordCount=result.missed_word_count,
             incorrectWordCount=result.incorrect_word_count,
-            pronunciationWarningCount=result.pronunciation_warning_count,
             suggestedRevisionAyahs=[
-                AyahReferenceDto(surahId=s, ayahNumber=a) for s, a in result.suggested_revision_ayahs
+                AyahReferenceDto(surahId=surah_id, ayahNumber=ayah_number)
+                for surah_id, ayah_number in result.suggested_revision_ayahs
             ],
-        )
+        ),
     )
-
-
-@app.get("/health")
-async def health():
-    return {"status": "ok", "model_loaded": _asr is not None}

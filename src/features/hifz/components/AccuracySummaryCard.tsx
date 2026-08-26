@@ -22,7 +22,6 @@ export function AccuracySummaryCard({ result }: AccuracySummaryCardProps) {
     { label: 'Correct words', value: result.correctWordCount, color: tokens.hifz.correct },
     { label: 'Missed words', value: result.missedWordCount, color: tokens.text.secondary },
     { label: 'Incorrect words', value: result.incorrectWordCount, color: tokens.hifz.incorrect },
-    { label: 'Pronunciation warnings', value: result.pronunciationWarningCount, color: tokens.hifz.pronunciation },
   ];
 
   return (

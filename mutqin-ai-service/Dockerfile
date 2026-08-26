@@ -16,7 +16,9 @@ COPY app/ ./app/
 # a rebuild.
 
 ENV QURAN_DB_PATH=/data/quran-content.db
-ENV ASR_DEVICE=cuda
+ENV ASR_DEVICE=cpu
 
 EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=4)"
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -12,7 +12,7 @@ The Android application is usable as a development build, but it is not yet prod
 | Islamic library | Offline Hadith collections, categorized duas, the 99 Names of Allah, search, and unified bookmarks |
 | Prayer | Device-location prayer times from AlAdhan, one-second live countdown, cached data, accurate offline calculation, and Qibla compass |
 | Home | Live prayer summary, date-based daily ayah and hadith, Hifz progress, and quick actions |
-| Hifz | Session setup, recording, evaluation contract, word-level results, summary, and revision tracking are scaffolded |
+| Hifz | Start/end range selection, recording, aligned backend contract, word-level review, explicit acceptance, and revision tracking |
 | Settings and onboarding | Theme, notification preferences, language scaffolding, permissions, and onboarding flow |
 | Backend | The general Mutqin API, authentication, cloud synchronization, and production AI hosting are not deployed |
 
@@ -49,7 +49,7 @@ The prayer screen identifies whether the displayed schedule came from AlAdhan or
 - TanStack React Query with persisted caching
 - AlAdhan API with `adhan` offline fallback
 - KFGQPC Uthmanic Script HAFS font
-- Python/FastAPI Hifz evaluation service prototype
+- Python/FastAPI backend with a replaceable Quran ASR adapter
 
 ## Getting started
 
@@ -95,16 +95,18 @@ After changing an Expo public environment variable, restart Metro. A new native/
 
 ## Hifz evaluation service
 
-[`mutqin-ai-service`](mutqin-ai-service/) contains a separate FastAPI prototype for `POST /hifz/evaluate`. It retrieves canonical ayah text, transcribes Quran recitation, aligns the recognized words with the expected passage, and returns word-level evaluation results.
+[`mutqin-ai-service`](mutqin-ai-service/) contains the minimal FastAPI backend for `POST /v1/hifz/evaluate`. It validates a consecutive ayah range, retrieves canonical Quran text, transcribes the recording through a replaceable ASR adapter, and deterministically aligns the recognized words with the expected passage.
 
 The workflow and service contract exist, but the AI feature still needs:
 
-- Correction of edge cases around session ranges and Quranic marks
 - Real-device and real-recitation accuracy benchmarking
 - Authentication, rate limiting, monitoring, and secure deployment
-- Clear user confirmation before evaluation results update progress
+- Selection of the production ASR model based on measured results
+
+The first version reports word matches, substitutions, and omissions only. It does not claim pronunciation or Tajweed assessment. Evaluation results update local Hifz progress only after the user accepts them.
 
 See [`mutqin-ai-service/README.md`](mutqin-ai-service/README.md) for setup and deployment details.
+See [`BACKEND_AI_INTEGRATION_PLAN.md`](BACKEND_AI_INTEGRATION_PLAN.md) for the aligned architecture and controlled-beta plan.
 
 ## Project structure
 
@@ -144,7 +146,7 @@ pytest tests/ -v
 
 ## Main remaining work
 
-- Deploy and secure the Hifz evaluation service
+- Validate, deploy, and secure the Hifz evaluation backend
 - Implement authentication and cloud synchronization
 - Configure a reliable Quran recitation audio host
 - Complete notification scheduling and prayer-setting controls

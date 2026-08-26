@@ -3,11 +3,12 @@ import { FlashList } from '@shopify/flash-list';
 import { ListRow } from '@/design-system/components';
 import { Input } from '@/design-system/primitives/Input';
 import { VStack } from '@/design-system/primitives/Stack';
+import { Button } from '@/design-system/primitives/Button';
 import type { Surah } from '@/types';
 
 export interface SurahAyahPickerProps {
   surahs: Surah[];
-  onSelect: (surahId: number, startAyah: number) => void;
+  onSelect: (surahId: number, startAyah: number, endAyah: number) => void;
 }
 
 /**
@@ -19,6 +20,7 @@ export function SurahAyahPicker({ surahs, onSelect }: SurahAyahPickerProps) {
   const [query, setQuery] = useState('');
   const [selectedSurah, setSelectedSurah] = useState<Surah | null>(null);
   const [startAyahInput, setStartAyahInput] = useState('1');
+  const [endAyahInput, setEndAyahInput] = useState('3');
 
   const filtered = surahs.filter(
     (s) =>
@@ -28,6 +30,10 @@ export function SurahAyahPicker({ surahs, onSelect }: SurahAyahPickerProps) {
 
   if (selectedSurah) {
     const ayahNum = Math.max(1, Math.min(selectedSurah.ayahCount, Number(startAyahInput) || 1));
+    const endAyahNum = Math.max(
+      ayahNum,
+      Math.min(selectedSurah.ayahCount, ayahNum + 14, Number(endAyahInput) || ayahNum)
+    );
     return (
       <VStack gap={4}>
         <ListRow
@@ -41,8 +47,14 @@ export function SurahAyahPicker({ surahs, onSelect }: SurahAyahPickerProps) {
           keyboardType="number-pad"
           value={startAyahInput}
           onChangeText={setStartAyahInput}
-          onSubmitEditing={() => onSelect(selectedSurah.id, ayahNum)}
         />
+        <Input
+          label="Ending ayah (maximum 15 ayahs)"
+          keyboardType="number-pad"
+          value={endAyahInput}
+          onChangeText={setEndAyahInput}
+        />
+        <Button label="Start Session" onPress={() => onSelect(selectedSurah.id, ayahNum, endAyahNum)} />
       </VStack>
     );
   }

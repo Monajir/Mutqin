@@ -30,7 +30,7 @@ The architecture doc specifies a `features/*` structure with public APIs. I made
 ### 2.2 AI provider abstraction as a first-class layer
 Spec §11 says "AI services should be abstracted behind interfaces." I made this concrete:
 - `services/ai/hifzEvaluationProvider.ts` — the interface. `features/hifz/**` imports *only* this.
-- `services/ai/providers/openaiCompatibleProvider.ts` — the one concrete implementation, isolated so it's the only file that knows about the vendor contract, multipart upload shape, timeout tuning, etc.
+- `services/ai/providers/mutqinApiProvider.ts` — the concrete mobile adapter for the versioned Mutqin backend contract.
 - `config/di.ts` — the composition root. One singleton binds interface to implementation. Adding a second provider (e.g., a different vendor, or an on-device fallback) means writing one new file and changing one line in `di.ts` — zero changes inside `features/hifz`.
 
 This is the single most important architectural bet in this codebase, because the spec explicitly calls out the AI Hifz Assistant as the flagship feature and says future versions may need "multiple AI model support for recitation analysis" (§14). Getting the seam right now avoids a rewrite later.
@@ -44,7 +44,7 @@ The spec (§10) requires Quran/Hadith/Dua/Names/bookmarks/Hifz-progress/preferen
 Feature code never touches `getDb()` or `kvStorage` directly except inside that feature's `api/*Repository.ts` — this keeps SQL and storage-key strings from leaking into components.
 
 ### 2.4 Sync is additive, not blocking
-`hifz_progress`, `hifz_sessions`, and `bookmarks` tables carry a `synced` flag; writes go to SQLite immediately (so the UI never waits on network) and are queued in `useSyncQueueStore` / `sync_queue` table. The actual push-to-server worker is **not implemented** in this scaffold — it's Phase 3 (needs a real backend contract first) — but the queue and the `OfflineBanner` UI that surfaces "Syncing N pending changes" are wired and ready for it.
+`hifz_progress`, `hifz_sessions`, and `bookmarks` remain local-first. Cloud sync is intentionally inactive until identity, ownership, deletion, and conflict-resolution rules are defined; the app must not accumulate pretend sync work for an endpoint that does not exist.
 
 ### 2.5 Design tokens duplicated once, deliberately
 `tailwind.config.js` can't `require()` a `.ts` file under plain Node, so token *values* are mirrored in JS there with an explicit comment pointing back to the TS source of truth. This is a known, contained piece of tech debt — not an oversight — and is called out as a Phase 0 tooling task (a `check-tokens.js` sync-verification script) rather than silently left inconsistent.
@@ -128,15 +128,15 @@ Build order, each following `features/quran/{types,api/*Repository.ts,api/*Queri
 3. **Allah's Names** — grid → detail; simplest of the four, good for a less-senior contributor to build first as a warm-up on the pattern.
 4. **Bookmarks** — cross-cutting; the `bookmarks`/`bookmark_collections` SQLite tables already exist in the schema. Needs one query per content type plus a unified list/filter screen.
 
-### Phase 3 — Sync & backend integration
-1. Implement the actual sync worker consuming `sync_queue` (push on reconnect, per `useConnectivityStore`).
-2. Auth screens (sign in/up) — `useAuthStore` is ready to receive tokens; no UI exists yet.
-3. Recommendation engine integration — `useHomeData`'s `DAILY_CONTENT_POOL` is a documented placeholder for the real `/recommendations/*` endpoints already stubbed in `services/api/endpoints.ts`.
+### Phase 3 — Optional accounts and sync
+1. Define identity, ownership, deletion, and conflict-resolution rules.
+2. Add authentication only when cross-device backup is a confirmed requirement.
+3. Implement a sync worker after its real server contract exists.
 
-### Phase 4 — Hifz Assistant hardening
-1. Real backend endpoint behind `OpenAICompatibleHifzEvaluationProvider` (currently calls a not-yet-existing `/hifz/evaluate`).
-2. Streaming partial-word evaluation (the `onPartialUpdate` callback is already in the interface, unused by the v1 provider — this is the natural next increment without touching `features/hifz`).
-3. Tajweed-level analysis — explicitly out of scope per spec §6, revisit post-v1.
+### Phase 4 — Hifz Assistant validation and release
+1. Benchmark Quran ASR checkpoints on consented real-device recordings.
+2. Deploy the implemented `/v1/hifz/evaluate` backend behind HTTPS, authentication, rate limiting, and monitoring.
+3. Run a controlled beta. Streaming and Tajweed analysis remain deferred until the basic word-matching workflow is reliable.
 
 ### Phase 5 — Notifications
 1. `expo-notifications` scheduling logic driven off `useNotificationSettingsStore` + finalized prayer-time accuracy (Phase 0/1 dependency).
@@ -150,10 +150,10 @@ Build order, each following `features/quran/{types,api/*Repository.ts,api/*Queri
 
 ## 9. Known limitations of this scaffold (be upfront about these)
 
-- **No backend exists.** `services/api/client.ts` and every endpoint in `endpoints.ts` point at a URL that returns nothing today. The app runs fully offline against seeded SQLite data.
+- **The Hifz backend exists but is not deployed or model-validated.** Core reading and progress features remain offline-first.
 - **The full mushaf is bundled for offline use**, but its source and text still need the production authenticity review required by the specification.
 - **Prayer time math is an approximation**, clearly flagged in code and here, not fiqh-accurate.
 - **No test suite yet** — `jest`/`jest-expo` are in `package.json` but no test files are included; Phase 0 task.
 - **Fonts aren't bundled** — `typography.ts` references font families that need to be added via `expo-font` + actual font files in `assets/fonts/`.
 
-None of these block a `npx expo start` demo of the full navigation, offline Quran reading, live prayer countdown, Qibla compass, or a full (mocked-evaluation) Hifz session walkthrough once a real evaluation endpoint or a local stub is added.
+None of these block a local app demonstration. A real Hifz evaluation additionally requires the local backend and ASR model, or a deployed backend URL.

@@ -30,3 +30,9 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# Python / Hifz service generated files
+mutqin-ai-service/.pytest_cache/
+mutqin-ai-service/**/__pycache__/
+mutqin-ai-service/.venv/
+*.py[cod]

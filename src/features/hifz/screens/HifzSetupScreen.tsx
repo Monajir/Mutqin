@@ -23,8 +23,8 @@ export function HifzSetupScreen() {
         {surahs ? (
           <SurahAyahPicker
             surahs={surahs}
-            onSelect={(surahId, startAyah) => {
-              beginSession(surahId, startAyah);
+            onSelect={(surahId, startAyah, endAyah) => {
+              beginSession(surahId, startAyah, endAyah);
               router.push('/(tabs)/hifz/session');
             }}
           />

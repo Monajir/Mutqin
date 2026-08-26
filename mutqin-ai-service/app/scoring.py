@@ -1,61 +1,18 @@
-"""
-Word-level recitation scoring.
+"""Deterministic session-wide word alignment for Hifz evaluation.
 
-Core idea: this is a sequence-alignment problem, not a string-equality
-problem. A reciter might skip a word, stumble and repeat one, or the ASR
-might mishear one word in an otherwise-correct ayah — a naive
-position-by-position comparison breaks completely the moment there's a
-single insertion or deletion, cascading every subsequent word into a false
-mismatch. We need edit-distance alignment (same family of algorithm as
-`diff`/Levenshtein) between the canonical ayah words and the ASR's
-recognized words, THEN classify based on the alignment operations.
-
-Classification rules (matches WordEvaluationStatus in the frontend's
-services/ai/types.ts):
-  - correct              : canonical word aligned to a recognized word that
-                            matches after normalization, with ASR confidence
-                            at or above CONFIDENCE_THRESHOLD
-  - pronunciation_warning : matches after normalization, but ASR confidence
-                            is below threshold — i.e. the model heard the
-                            right word but wasn't sure, which in practice
-                            correlates with unclear/mumbled pronunciation.
-                            This is a deliberate v1 proxy for pronunciation
-                            quality (see note below) — not phoneme-level
-                            tajweed analysis, which is explicitly out of
-                            scope per the product spec.
-  - incorrect             : canonical word aligned to a recognized word that
-                            does NOT match after normalization (substitution)
-  - skipped               : canonical word has no aligned recognized word
-                            (deletion — reciter didn't say it, or said it too
-                            quietly/unclearly for ASR to pick up at all)
-
-NOTE on the pronunciation_warning proxy: ASR confidence is a real but
-imperfect signal — low confidence can also mean background noise or a
-recording-quality issue unrelated to the reciter's pronunciation. This is
-an accepted, documented v1 limitation, not a hidden one. True pronunciation/
-tajweed scoring needs phoneme-level forced alignment, which is future work
-(see the roadmap's "Hifz Assistant hardening" phase).
+The service reports only what the transcript can support: normalized word
+matches, substitutions and omissions. It does not infer pronunciation or
+Tajweed quality from ASR confidence.
 """
 from dataclasses import dataclass, field
-from enum import Enum
 
 from app.arabic_normalize import normalize_arabic_word
-
-
-class WordStatus(str, Enum):
-    CORRECT = "correct"
-    PRONUNCIATION_WARNING = "pronunciation_warning"
-    INCORRECT = "incorrect"
-    SKIPPED = "skipped"
-
-
-CONFIDENCE_THRESHOLD = 0.55
+from app.schemas import WordStatus
 
 
 @dataclass
 class RecognizedWord:
     text: str
-    confidence: float  # 0.0-1.0, from the ASR model
 
 
 @dataclass
@@ -144,12 +101,7 @@ def score_ayah(
         else:
             recognized = recognized_words[recog_idx]
             is_match = normalize_arabic_word(canonical_text) == normalize_arabic_word(recognized.text)
-            if not is_match:
-                status = WordStatus.INCORRECT
-            elif recognized.confidence < CONFIDENCE_THRESHOLD:
-                status = WordStatus.PRONUNCIATION_WARNING
-            else:
-                status = WordStatus.CORRECT
+            status = WordStatus.CORRECT if is_match else WordStatus.INCORRECT
 
         evaluations.append(WordEvaluation(word_index=canon_idx, text=canonical_text, status=status))
 
@@ -217,13 +169,12 @@ class RecitationResult:
     correct_word_count: int
     missed_word_count: int
     incorrect_word_count: int
-    pronunciation_warning_count: int
     suggested_revision_ayahs: list[tuple[int, int]] = field(default_factory=list)
 
 
 def aggregate_result(ayah_evaluations: list[AyahEvaluation]) -> RecitationResult:
     """Rolls per-ayah word evaluations into the overall RecitationEvaluationResult shape."""
-    correct = missed = incorrect = warnings = 0
+    correct = missed = incorrect = 0
     for ayah in ayah_evaluations:
         for w in ayah.words:
             if w.status == WordStatus.CORRECT:
@@ -232,9 +183,6 @@ def aggregate_result(ayah_evaluations: list[AyahEvaluation]) -> RecitationResult
                 missed += 1
             elif w.status == WordStatus.INCORRECT:
                 incorrect += 1
-            elif w.status == WordStatus.PRONUNCIATION_WARNING:
-                warnings += 1
-                correct += 1  # counts toward accuracy — it WAS the right word
 
     total = correct + missed + incorrect
     accuracy = correct / total if total > 0 else 0.0
@@ -244,7 +192,7 @@ def aggregate_result(ayah_evaluations: list[AyahEvaluation]) -> RecitationResult
     revision_ayahs = []
     for ayah in ayah_evaluations:
         ayah_total = len(ayah.words)
-        ayah_correct = sum(1 for w in ayah.words if w.status in (WordStatus.CORRECT, WordStatus.PRONUNCIATION_WARNING))
+        ayah_correct = sum(1 for w in ayah.words if w.status == WordStatus.CORRECT)
         ayah_accuracy = ayah_correct / ayah_total if ayah_total > 0 else 1.0
         if ayah_accuracy < 0.8:
             revision_ayahs.append((ayah.surah_id, ayah.ayah_number))
@@ -255,6 +203,5 @@ def aggregate_result(ayah_evaluations: list[AyahEvaluation]) -> RecitationResult
         correct_word_count=correct,
         missed_word_count=missed,
         incorrect_word_count=incorrect,
-        pronunciation_warning_count=warnings,
         suggested_revision_ayahs=revision_ayahs,
     )

@@ -31,7 +31,9 @@ export class ApiError extends Error {
     if (status === 401) return new ApiError('unauthorized', message, status, false);
     if (status === 403) return new ApiError('forbidden', message, status, false);
     if (status === 404) return new ApiError('not_found', message, status, false);
-    if (status === 422 || status === 400) return new ApiError('validation_error', message, status, false);
+    if (status === 400 || status === 413 || status === 415 || status === 422) {
+      return new ApiError('validation_error', message, status, false);
+    }
     if (status >= 500) return new ApiError('server_error', message, status, true);
     return new ApiError('unknown', message, status, false);
   }
@@ -48,6 +50,9 @@ export class ApiError extends Error {
 function extractMessage(body: unknown): string | undefined {
   if (body && typeof body === 'object' && 'message' in body && typeof (body as { message: unknown }).message === 'string') {
     return (body as { message: string }).message;
+  }
+  if (body && typeof body === 'object' && 'detail' in body && typeof (body as { detail: unknown }).detail === 'string') {
+    return (body as { detail: string }).detail;
   }
   return undefined;
 }

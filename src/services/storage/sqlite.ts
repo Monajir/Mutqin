@@ -11,7 +11,7 @@ import * as FileSystem from 'expo-file-system';
  */
 const DB_NAME = 'mutqin.db';
 const BUNDLED_CONTENT_DB_NAME = 'mutqin-content-pack.db';
-const BUNDLED_CONTENT_VERSION = '2026-07-31-library-with-names';
+const BUNDLED_CONTENT_VERSION = '2026-08-06-quran-basmala-fix';
 const EXPECTED_SURAH_COUNT = 114;
 const EXPECTED_AYAH_COUNT = 6236;
 const EXPECTED_HADITH_COUNT = 33511;
