@@ -6,7 +6,7 @@ Tajweed quality from ASR confidence.
 """
 from dataclasses import dataclass, field
 
-from app.arabic_normalize import normalize_arabic_word
+from app.arabic_normalize import arabic_words_match
 from app.schemas import WordStatus
 
 
@@ -40,9 +40,6 @@ def _levenshtein_alignment(canonical: list[str], recognized: list[str]) -> list[
     look back up original surface forms.
     """
     n, m = len(canonical), len(recognized)
-    norm_canon = [normalize_arabic_word(w) for w in canonical]
-    norm_recog = [normalize_arabic_word(w) for w in recognized]
-
     # dp[i][j] = edit distance between canonical[:i] and recognized[:j]
     dp = [[0] * (m + 1) for _ in range(n + 1)]
     for i in range(n + 1):
@@ -51,7 +48,7 @@ def _levenshtein_alignment(canonical: list[str], recognized: list[str]) -> list[
         dp[0][j] = j
     for i in range(1, n + 1):
         for j in range(1, m + 1):
-            cost = 0 if norm_canon[i - 1] == norm_recog[j - 1] else 1
+            cost = 0 if arabic_words_match(canonical[i - 1], recognized[j - 1]) else 1
             dp[i][j] = min(
                 dp[i - 1][j] + 1,       # deletion (skipped canonical word)
                 dp[i][j - 1] + 1,       # insertion (extra recognized word)
@@ -63,7 +60,7 @@ def _levenshtein_alignment(canonical: list[str], recognized: list[str]) -> list[
     i, j = n, m
     while i > 0 or j > 0:
         if i > 0 and j > 0:
-            cost = 0 if norm_canon[i - 1] == norm_recog[j - 1] else 1
+            cost = 0 if arabic_words_match(canonical[i - 1], recognized[j - 1]) else 1
             if dp[i][j] == dp[i - 1][j - 1] + cost:
                 aligned.append((i - 1, j - 1))
                 i, j = i - 1, j - 1
@@ -100,7 +97,7 @@ def score_ayah(
             status = WordStatus.SKIPPED
         else:
             recognized = recognized_words[recog_idx]
-            is_match = normalize_arabic_word(canonical_text) == normalize_arabic_word(recognized.text)
+            is_match = arabic_words_match(canonical_text, recognized.text)
             status = WordStatus.CORRECT if is_match else WordStatus.INCORRECT
 
         evaluations.append(WordEvaluation(word_index=canon_idx, text=canonical_text, status=status))

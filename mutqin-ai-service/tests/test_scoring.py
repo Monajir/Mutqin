@@ -1,4 +1,17 @@
 from app.scoring import score_ayah, aggregate_result, RecognizedWord, WordStatus
+from app.arabic_normalize import arabic_words_match
+
+
+def test_uthmani_dagger_alif_matches_common_asr_spelling():
+    assert arabic_words_match("مَـٰلِكِ", "مَالِكِ")
+    assert arabic_words_match("ٱلْعَـٰلَمِينَ", "الْعَالَمِينَ")
+    assert arabic_words_match("ٱلرَّحْمَـٰنِ", "الرَّحْمَنِ")
+
+
+def test_long_word_allows_one_asr_character_error_but_short_word_stays_strict():
+    assert arabic_words_match("ٱلرَّحِيمِ", "الرَّحِي")
+    assert not arabic_words_match("رَبِّ", "وَقِّ")
+    assert not arabic_words_match("ٱلْعَـٰلَمِينَ", "الْعَامِلِ")
 
 
 def test_scoring():

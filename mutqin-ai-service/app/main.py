@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import shutil
 import tempfile
 from contextlib import asynccontextmanager
 from uuid import uuid4
@@ -9,6 +10,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from pydantic import TypeAdapter, ValidationError
 from starlette.concurrency import run_in_threadpool
 
+from app.audio import AudioDecodeError
 from app.asr import WhisperRecitationTranscriber
 from app.config import settings
 from app.quran_repository import QuranRepository, QuranRepositoryError
@@ -22,7 +24,7 @@ from app.schemas import (
 )
 from app.scoring import aggregate_result, score_session
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn.error")
 AYAH_LIST_ADAPTER = TypeAdapter(list[AyahReferenceDto])
 SUPPORTED_AUDIO_TYPES = {
     "audio/m4a",
@@ -139,12 +141,26 @@ async def evaluate_recitation(
         raise HTTPException(status_code=400, detail=str(error)) from error
 
     temporary_path = await save_upload(audio)
+    if settings.asr_debug_audio_path:
+        debug_path = os.path.abspath(settings.asr_debug_audio_path)
+        os.makedirs(os.path.dirname(debug_path), exist_ok=True)
+        shutil.copyfile(temporary_path, debug_path)
+        logger.info("Saved the latest debug recording to %s", debug_path)
     try:
         recognized_words = await run_in_threadpool(transcriber.transcribe, temporary_path)
         ayah_evaluations = score_session(canonical_ayahs, recognized_words)
         result = aggregate_result(ayah_evaluations)
-    except HTTPException:
-        raise
+        logger.info(
+            "Recitation score: expected=%d recognized=%d correct=%d missed=%d incorrect=%d accuracy=%.1f%%",
+            sum(len(words) for _, _, words in canonical_ayahs),
+            len(recognized_words),
+            result.correct_word_count,
+            result.missed_word_count,
+            result.incorrect_word_count,
+            result.overall_accuracy * 100,
+        )
+    except AudioDecodeError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
     except Exception as error:
         logger.exception("Recitation evaluation failed")
         raise HTTPException(status_code=503, detail="Recitation evaluation failed.") from error

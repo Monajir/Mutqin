@@ -16,9 +16,8 @@ export interface VerseRevealerProps {
 /**
  * Core visual of the AI Hifz Assistant (spec §6): the target ayah starts
  * hidden, and correctly recited words are progressively revealed with
- * color-coded status (correct/incorrect/skipped). Previous
- * (already-passed) ayahs are rendered normally by the parent screen using
- * plain `ArabicText`; this component only renders the "active" ayah.
+ * color-coded status (correct/incorrect/skipped). The session screen reuses
+ * it for every ayah when displaying an inline evaluation.
  */
 export function VerseRevealer({ fullText, revealedWords, totalWordCount }: VerseRevealerProps) {
   const { tokens } = useAppTheme();

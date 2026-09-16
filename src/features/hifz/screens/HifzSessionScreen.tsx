@@ -1,25 +1,32 @@
 import React, { useMemo } from 'react';
 import { useRouter } from 'expo-router';
-import { ScreenWrapper } from '@/components';
-import { ArabicText } from '@/components';
-import { VStack } from '@/design-system/primitives/Stack';
+import { EmptyState, ScreenWrapper } from '@/components';
+import { VStack, HStack } from '@/design-system/primitives/Stack';
 import { Text } from '@/design-system/primitives/Text';
+import { Button } from '@/design-system/primitives/Button';
 import { Divider } from '@/design-system/primitives/Divider';
+import { useToast } from '@/design-system/components';
+import { useAppTheme } from '@/design-system/theme';
 import { useAyahRange } from '@/features/quran';
 import { useHifzSessionStore } from '../store/useHifzSessionStore';
 import { useHifzSession } from '../hooks/useHifzSession';
 import { VerseRevealer } from '../components/VerseRevealer';
 import { RecordButton } from '../components/RecordButton';
-import { EmptyState } from '@/components';
+import { AccuracySummaryCard } from '../components/AccuracySummaryCard';
+import { useApplyEvaluationResult } from '../api/hifzMutations';
+import { hifzRepository } from '../api/hifzRepository';
 
 /**
- * Wireframe screen 05 — the main AI Hifz Assistant recitation view.
- * Renders already-passed ayahs normally and the active ayah obscured/
- * progressively revealed via VerseRevealer, per spec §6.
+ * Main AI Hifz recitation view. The selected range stays hidden while
+ * recording, then the evaluation is displayed in place with word-level
+ * feedback and save/retry actions.
  */
 export function HifzSessionScreen() {
   const router = useRouter();
-  const { surahId, startAyah, endAyah, revealedWords, phase, result } = useHifzSessionStore();
+  const toast = useToast();
+  const { tokens } = useAppTheme();
+  const applyEvaluation = useApplyEvaluationResult();
+  const { surahId, startAyah, endAyah, revealedWords, phase, result, retrySameRange, reset } = useHifzSessionStore();
 
   const ayahCount = startAyah !== null && endAyah !== null ? endAyah - startAyah + 1 : 0;
   const { data: ayahs } = useAyahRange(surahId, startAyah, ayahCount);
@@ -28,12 +35,13 @@ export function HifzSessionScreen() {
     [ayahs]
   );
   const session = useHifzSession(expectedAyahs);
-
-  React.useEffect(() => {
-    if (phase === 'summary' && result) {
-      router.push('/(modals)/hifz-summary');
-    }
-  }, [phase, result, router]);
+  const resultByAyah = useMemo(
+    () => new Map(result?.ayahs.map((evaluation) => [
+      `${evaluation.ayah.surahId}-${evaluation.ayah.ayahNumber}`,
+      evaluation,
+    ]) ?? []),
+    [result]
+  );
 
   if (surahId === null || startAyah === null || endAyah === null) {
     return (
@@ -52,8 +60,26 @@ export function HifzSessionScreen() {
   }
 
   const activeAyah = ayahs[0]!;
-  const activeKey = `${activeAyah.surahId}-${activeAyah.ayahNumber}`;
-  const activeWordCount = activeAyah.textArabic.split(' ').length;
+  const isReviewing = phase === 'summary' && result !== null;
+
+  const acceptResult = async () => {
+    if (!result) return;
+
+    try {
+      await applyEvaluation.mutateAsync(result);
+      hifzRepository.saveSession({
+        id: `${surahId}-${startAyah}-${Date.now()}`,
+        surahId,
+        startAyah,
+        endAyah: result.ayahs.at(-1)?.ayah.ayahNumber ?? null,
+        overallAccuracy: result.overallAccuracy,
+      });
+      reset();
+      router.replace('/(tabs)/hifz');
+    } catch {
+      toast.show('Could not save this result. Please try again.', 'error');
+    }
+  };
 
   return (
     <ScreenWrapper scroll>
@@ -62,36 +88,76 @@ export function HifzSessionScreen() {
           {`Surah ${activeAyah.surahId} · Ayahs ${startAyah}–${endAyah}`}
         </Text>
 
-        <VerseRevealer
-          fullText={activeAyah.textArabic}
-          revealedWords={revealedWords[activeKey] ?? []}
-          totalWordCount={activeWordCount}
-        />
+        <VStack gap={4}>
+          {ayahs.map((ayah, index) => {
+            const key = `${ayah.surahId}-${ayah.ayahNumber}`;
+            const evaluation = resultByAyah.get(key);
+            const words = isReviewing
+              ? evaluation?.words ?? []
+              : index === 0
+                ? revealedWords[key] ?? []
+                : [];
 
-        <Divider />
-
-        <VStack gap={3}>
-          {ayahs.slice(1, 4).map((ayah) => (
-            <ArabicText key={ayah.ayahNumber} variant="quran" color="muted">
-              {ayah.textArabic}
-            </ArabicText>
-          ))}
+            return (
+              <VStack key={key} gap={2}>
+                <Text variant="caption" color="secondary">
+                  {`Ayah ${ayah.ayahNumber}`}
+                </Text>
+                <VerseRevealer
+                  fullText={ayah.textArabic}
+                  revealedWords={words}
+                  totalWordCount={ayah.textArabic.split(/\s+/).filter(Boolean).length}
+                />
+                {index < ayahs.length - 1 ? <Divider /> : null}
+              </VStack>
+            );
+          })}
         </VStack>
 
-        <VStack align="center" style={{ marginTop: 'auto', paddingVertical: 24 }}>
-          <RecordButton
-            isRecording={session.isRecording}
-            disabled={session.isEvaluating || expectedAyahs.length === 0}
-            onPressIn={session.startHolding}
-            onPressOut={session.releaseAndEvaluate}
-            durationSec={session.durationSec}
-          />
-          {session.recorderErrorMessage ? (
-            <Text variant="caption" color="error" style={{ marginTop: 8 }}>
-              {session.recorderErrorMessage}
-            </Text>
-          ) : null}
-        </VStack>
+        {isReviewing ? (
+          <VStack gap={4}>
+            <HStack gap={4} justify="center">
+              <Text variant="caption" style={{ color: tokens.hifz.correct }}>● Correct</Text>
+              <Text variant="caption" style={{ color: tokens.hifz.incorrect }}>● Missed / incorrect</Text>
+            </HStack>
+            <AccuracySummaryCard result={result} />
+            <HStack gap={3}>
+              <Button
+                label="Retry"
+                variant="secondary"
+                style={{ flex: 1 }}
+                disabled={applyEvaluation.isPending}
+                onPress={retrySameRange}
+              />
+              <Button
+                label="Accept & Continue"
+                style={{ flex: 1 }}
+                loading={applyEvaluation.isPending}
+                onPress={acceptResult}
+              />
+            </HStack>
+          </VStack>
+        ) : (
+          <VStack align="center" style={{ marginTop: 'auto', paddingVertical: 24 }}>
+            <RecordButton
+              isRecording={session.isRecording}
+              disabled={session.isEvaluating || expectedAyahs.length === 0}
+              onPressIn={session.startHolding}
+              onPressOut={session.releaseAndEvaluate}
+              durationSec={session.durationSec}
+            />
+            {session.isEvaluating ? (
+              <Text variant="caption" color="secondary" style={{ marginTop: 8 }}>
+                Evaluating your recitation…
+              </Text>
+            ) : null}
+            {session.recorderErrorMessage ? (
+              <Text variant="caption" color="error" style={{ marginTop: 8 }}>
+                {session.recorderErrorMessage}
+              </Text>
+            ) : null}
+          </VStack>
+        )}
       </VStack>
     </ScreenWrapper>
   );
