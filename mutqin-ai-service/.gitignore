@@ -3,3 +3,6 @@ __pycache__/
 .pytest_cache/
 data/*.db
 .env
+data/*.m4a
+data/*.json
+data/benchmarks/

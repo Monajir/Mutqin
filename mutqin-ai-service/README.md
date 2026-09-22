@@ -85,6 +85,34 @@ $env:ASR_DEVICE="cpu"
 .\.venv\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
+### Preserve recordings for transcription testing
+
+The GPU launcher saves each uploaded recording to `data/last-recitation.m4a` and its selected ayah references to `data/last-recitation.m4a.json`. The next submission overwrites these latest files. This is a local development diagnostic: recordings contain personal voice data and are excluded from Git. Do not enable `ASR_DEBUG_AUDIO_PATH` on a public deployment without an explicit retention/consent policy.
+
+After submitting a session, preserve it before recording the next one:
+
+```powershell
+.\save-benchmark.ps1 -Name furqan-61-63-correct-own-voice
+```
+
+This copies both files into `data/benchmarks/` without overwriting existing benchmarks. Use distinct names indicating the ayahs, speaker, and whether the recording is correct or deliberately contains an omission/substitution. Keep several correct recordings and known-error recordings so model improvements do not simply hide real mistakes.
+
+Replay the identical recording against a running backend when comparing transcription changes:
+
+```powershell
+.\.venv\python.exe .\replay-benchmark.py furqan-61-63-correct-own-voice
+```
+
+The terminal shows the response and elapsed time; the backend terminal shows the raw transcript. Replay also replaces the latest diagnostic recording, so preserve any unsaved phone recording first.
+
+Compare the frozen older splitter against context-preserving segmentation and Arabic decoding options on all preserved recordings:
+
+```powershell
+.\.venv\python.exe .\compare-benchmarks.py
+```
+
+This loads the cached model independently without changing the running backend or overwriting the audio. Raw transcripts, chunk lengths, word classifications, and timings are saved in `data/benchmark-comparison.json`. All variants use the same spelling normalization. The deliberately skipped word must remain unmatched; a higher match score alone is not sufficient to select a configuration. This small Al-Furqan test set does not establish accuracy across the Quran or across unseen speakers.
+
 For an Android phone connected through ADB:
 
 ```powershell

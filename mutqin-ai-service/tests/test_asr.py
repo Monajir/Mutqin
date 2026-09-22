@@ -59,7 +59,7 @@ def test_long_audio_is_split_near_a_quiet_point():
     assert sum(len(chunk) for chunk in chunks) == len(audio)
 
 
-def test_short_opening_phrase_is_isolated_when_followed_by_a_pause():
+def test_short_recording_preserves_context_even_with_a_pause():
     import numpy as np
 
     audio = np.ones(20 * SAMPLE_RATE, dtype=np.float32)
@@ -68,6 +68,5 @@ def test_short_opening_phrase_is_isolated_when_followed_by_a_pause():
 
     chunks = split_audio_at_quiet_points(audio)
 
-    assert len(chunks) == 2
-    assert 5.8 * SAMPLE_RATE <= len(chunks[0]) <= 6.3 * SAMPLE_RATE
+    assert len(chunks) == 1
     assert sum(len(chunk) for chunk in chunks) == len(audio)

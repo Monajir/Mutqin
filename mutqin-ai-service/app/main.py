@@ -145,6 +145,8 @@ async def evaluate_recitation(
         debug_path = os.path.abspath(settings.asr_debug_audio_path)
         os.makedirs(os.path.dirname(debug_path), exist_ok=True)
         shutil.copyfile(temporary_path, debug_path)
+        with open(debug_path + ".json", "w", encoding="utf-8") as metadata_file:
+            json.dump({"expectedAyahs": [reference.model_dump() for reference in references]}, metadata_file, ensure_ascii=False, indent=2)
         logger.info("Saved the latest debug recording to %s", debug_path)
     try:
         recognized_words = await run_in_threadpool(transcriber.transcribe, temporary_path)

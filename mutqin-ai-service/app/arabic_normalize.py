@@ -48,6 +48,9 @@ def normalize_arabic_word(word: str, *, preserve_dagger_alif: bool = False) -> s
     text = _TATWEEL_PATTERN.sub('', text)
     for src, dst in _CHAR_NORMALIZE_MAP.items():
         text = text.replace(src, dst)
+    # Uthmani الليل omits the second written lam and marks gemination instead.
+    # Expand only this known spelling, not arbitrary one-character differences.
+    text = {"اليل": "الليل", "واليل": "والليل"}.get(text, text)
     # Whisper may append punctuation to the final word in a phrase.
     text = ''.join(character for character in text if not unicodedata.category(character).startswith('P'))
     return text.strip()
@@ -63,34 +66,7 @@ def arabic_words_match(expected: str, recognized: str) -> bool:
         normalize_arabic_word(recognized),
         normalize_arabic_word(recognized, preserve_dagger_alif=True),
     }
-    if expected_forms & recognized_forms:
-        return True
-
-    # Quran ASR occasionally drops or substitutes one character at the edge
-    # of a longer word. Tolerate one edit for words long enough that doing so
-    # remains discriminating; short words such as رب stay exact.
-    for expected_form in expected_forms:
-        for recognized_form in recognized_forms:
-            if max(len(expected_form), len(recognized_form)) >= 5:
-                if _levenshtein_distance(expected_form, recognized_form) <= 1:
-                    return True
-    return False
-
-
-def _levenshtein_distance(left: str, right: str) -> int:
-    previous = list(range(len(right) + 1))
-    for left_index, left_character in enumerate(left, start=1):
-        current = [left_index]
-        for right_index, right_character in enumerate(right, start=1):
-            current.append(
-                min(
-                    current[-1] + 1,
-                    previous[right_index] + 1,
-                    previous[right_index - 1] + (left_character != right_character),
-                )
-            )
-        previous = current
-    return previous[-1]
+    return bool(expected_forms & recognized_forms)
 
 
 def tokenize_ayah(text: str) -> list[str]:

@@ -117,10 +117,13 @@ export function HifzSessionScreen() {
         {isReviewing ? (
           <VStack gap={4}>
             <HStack gap={4} justify="center">
-              <Text variant="caption" style={{ color: tokens.hifz.correct }}>● Correct</Text>
-              <Text variant="caption" style={{ color: tokens.hifz.incorrect }}>● Missed / incorrect</Text>
+              <Text variant="caption" style={{ color: tokens.hifz.correct }}>● Matched</Text>
+              <Text variant="caption" style={{ color: tokens.hifz.incorrect }}>● Review word</Text>
             </HStack>
             <AccuracySummaryCard result={result} />
+            <Text variant="caption" color="secondary">
+              AI may mishear your voice. Red words need review, not necessarily correction. Save only after checking the feedback.
+            </Text>
             <HStack gap={3}>
               <Button
                 label="Retry"
@@ -130,7 +133,7 @@ export function HifzSessionScreen() {
                 onPress={retrySameRange}
               />
               <Button
-                label="Accept & Continue"
+                label="Confirm & Save"
                 style={{ flex: 1 }}
                 loading={applyEvaluation.isPending}
                 onPress={acceptResult}

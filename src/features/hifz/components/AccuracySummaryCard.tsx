@@ -19,9 +19,9 @@ export function AccuracySummaryCard({ result }: AccuracySummaryCardProps) {
     accuracyPercent >= 90 ? tokens.semantic.success : accuracyPercent >= 70 ? tokens.semantic.warning : tokens.semantic.error;
 
   const stats: { label: string; value: number; color: string }[] = [
-    { label: 'Correct words', value: result.correctWordCount, color: tokens.hifz.correct },
-    { label: 'Missed words', value: result.missedWordCount, color: tokens.hifz.incorrect },
-    { label: 'Incorrect words', value: result.incorrectWordCount, color: tokens.hifz.incorrect },
+    { label: 'Matched words', value: result.correctWordCount, color: tokens.hifz.correct },
+    { label: 'Not detected', value: result.missedWordCount, color: tokens.hifz.incorrect },
+    { label: 'Possible mismatches', value: result.incorrectWordCount, color: tokens.hifz.incorrect },
   ];
 
   return (
@@ -41,7 +41,7 @@ export function AccuracySummaryCard({ result }: AccuracySummaryCardProps) {
           <Text variant="headingLg" weight="700">{`${accuracyPercent}%`}</Text>
         </View>
         <Text variant="bodySm" color="secondary">
-          Overall Accuracy
+          Transcript Match
         </Text>
       </VStack>
 

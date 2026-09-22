@@ -10,49 +10,22 @@ logger = logging.getLogger("uvicorn.error")
 SAMPLE_RATE = 16_000
 MAX_CHUNK_SECONDS = 25
 MIN_CHUNK_SECONDS = 15
-PAUSE_SEARCH_SECONDS = 10
-MIN_PHRASE_SECONDS = 2
-MIN_TRAILING_SECONDS = 1.5
 SILENCE_WINDOW_SECONDS = 0.25
 SILENCE_STEP_SECONDS = 0.05
-QUIET_POINT_RATIO = 0.7
 
 
 def split_audio_at_quiet_points(audio):
-    """Split on sustained recitation pauses and stay below Whisper's limit."""
+    """Preserve short-recording context; split longer audio near quiet points."""
     import numpy as np
 
     max_samples = MAX_CHUNK_SECONDS * SAMPLE_RATE
     min_samples = MIN_CHUNK_SECONDS * SAMPLE_RATE
-    pause_search_samples = PAUSE_SEARCH_SECONDS * SAMPLE_RATE
-    min_phrase_samples = int(MIN_PHRASE_SECONDS * SAMPLE_RATE)
-    min_trailing_samples = int(MIN_TRAILING_SECONDS * SAMPLE_RATE)
     window_samples = int(SILENCE_WINDOW_SECONDS * SAMPLE_RATE)
     step_samples = int(SILENCE_STEP_SECONDS * SAMPLE_RATE)
     chunks = []
     start = 0
 
     while start < len(audio):
-        # Prefer the first sustained pause after at least two seconds. This
-        # keeps ayahs in separate inference windows without cutting on the
-        # much shorter low-energy gaps between ordinary words.
-        search_start = start + min_phrase_samples
-        search_end = min(start + pause_search_samples, len(audio) - min_trailing_samples)
-        reference_end = min(start + pause_search_samples, len(audio))
-        reference_energy = float(np.median(np.abs(audio[start:reference_end])))
-        pause_at = None
-        if search_start + window_samples <= search_end and reference_energy > 0:
-            for offset in range(search_start, search_end - window_samples + 1, step_samples):
-                energy = float(np.mean(np.abs(audio[offset:offset + window_samples])))
-                if energy <= reference_energy * QUIET_POINT_RATIO:
-                    pause_at = offset + window_samples // 2
-                    break
-
-        if pause_at is not None:
-            chunks.append(audio[start:pause_at])
-            start = pause_at
-            continue
-
         if len(audio) - start <= max_samples:
             chunks.append(audio[start:])
             break
@@ -61,7 +34,7 @@ def split_audio_at_quiet_points(audio):
         # safely below 30 seconds and cut at the quietest available point.
         search_start = start + min_samples
         search_end = min(start + max_samples, len(audio))
-        candidates = range(search_start, search_end - window_samples + 1, window_samples)
+        candidates = range(search_start, search_end - window_samples, step_samples)
         split_at = min(
             candidates,
             key=lambda offset: float(np.mean(np.abs(audio[offset:offset + window_samples]))),
@@ -96,6 +69,13 @@ class WhisperRecitationTranscriber:
             clean_up_tokenization_spaces=False,
         )
         self.model = WhisperForConditionalGeneration.from_pretrained(model_id).to(self.device)
+        # Use decoder IDs rather than generate(language=...), which older
+        # Quran checkpoints may not support in their generation config.
+        self.model.generation_config.language = None
+        self.model.generation_config.task = None
+        self.model.generation_config.forced_decoder_ids = self.processor.get_decoder_prompt_ids(
+            language="ar", task="transcribe"
+        )
         self.model.eval()
 
     def transcribe(self, audio_path: str) -> list[RecognizedWord]:
