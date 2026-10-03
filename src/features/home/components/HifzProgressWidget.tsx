@@ -7,10 +7,9 @@ import type { HifzOverallStats } from '@/features/hifz';
 
 export interface HifzProgressWidgetProps {
   stats: HifzOverallStats;
-  revisionDueCount: number;
 }
 
-export function HifzProgressWidget({ stats, revisionDueCount }: HifzProgressWidgetProps) {
+export function HifzProgressWidget({ stats }: HifzProgressWidgetProps) {
   const router = useRouter();
 
   return (
@@ -24,7 +23,7 @@ export function HifzProgressWidget({ stats, revisionDueCount }: HifzProgressWidg
         </HStack>
         <ProgressBar progress={stats.overallPercentComplete} accessibilityLabel="Hifz progress" />
         <Text variant="bodySm" color="secondary">
-          {`${revisionDueCount} ayahs due for revision`}
+          {`${stats.totalMemorized} / 6236 ayahs memorized`}
         </Text>
       </VStack>
     </Card>

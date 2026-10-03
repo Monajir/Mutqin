@@ -29,7 +29,7 @@ const prayerIcons = {
 export function HomeScreen() {
   const { tokens } = useAppTheme();
   const { show: showToast } = useToast();
-  const { prayerTimes, hifzStats, revisionDueCount, dailyVerse, dailyHadith, hijriDate } = useHomeData();
+  const { prayerTimes, hifzStats, dailyVerse, dailyHadith, hijriDate } = useHomeData();
   const { data: quranBookmarkRefs = [] } = useBookmarkRefs('quran');
   const toggleBookmark = useToggleBookmark();
   const dailyVerseRef = dailyVerse ? `${dailyVerse.surahId}:${dailyVerse.ayahNumber}` : '';
@@ -142,7 +142,7 @@ export function HomeScreen() {
         )}
 
         {hifzStats ? (
-          <HifzProgressWidget stats={hifzStats} revisionDueCount={revisionDueCount} />
+          <HifzProgressWidget stats={hifzStats} />
         ) : (
           <Skeleton height={110} />
         )}

@@ -6,6 +6,9 @@ import { ArabicText, EmptyState, ScreenWrapper } from '@/components';
 import { HStack, VStack } from '@/design-system/primitives/Stack';
 import { Text } from '@/design-system/primitives/Text';
 import { IconButton } from '@/design-system/primitives/IconButton';
+import { Button } from '@/design-system/primitives/Button';
+import { RecitationControls, RecitationSettingsSheet } from '../components/RecitationControls';
+import { useRecitationPlayer } from '../hooks/useRecitationPlayer';
 import { SegmentedControl, useToast } from '@/design-system/components';
 import { useAppTheme } from '@/design-system/theme';
 import { spacing } from '@/design-system/tokens/spacing';
@@ -13,9 +16,7 @@ import { radii } from '@/design-system/tokens/radii';
 import { useAyahRange, useQuranSurahs } from '../api/quranQueries';
 import { useSetLastRead } from '../api/quranMutations';
 import { AyahRow } from '../components/AyahRow';
-import { useAudioPlayerStore } from '@/stores';
 import { useBookmarkRefs, useToggleBookmark } from '@/features/bookmarks';
-import { env } from '@/config/env';
 import type { Ayah } from '@/types';
 
 type ReaderMode = 'arabic' | 'both' | 'english';
@@ -133,12 +134,13 @@ export function QuranReaderScreen() {
   const { surahId: surahIdParam } = useLocalSearchParams<{ surahId: string }>();
   const surahId = Number(surahIdParam);
   const [readerMode, setReaderMode] = useState<ReaderMode>('both');
+  const [audioSettingsOpen, setAudioSettingsOpen] = useState(false);
   const { data: surahs } = useQuranSurahs();
   const { data: ayahs, isLoading } = useAyahRange(surahId, 1, MAX_SURAH_AYAHS);
   const setLastRead = useSetLastRead();
   const { data: bookmarkRefs = [] } = useBookmarkRefs('quran');
   const toggleBookmark = useToggleBookmark();
-  const playTrack = useAudioPlayerStore((state) => state.play);
+  const { player, state: audioState } = useRecitationPlayer(surahId, ayahs?.length ?? MAX_SURAH_AYAHS);
   const { show: showToast } = useToast();
   const returnToSurahList = useCallback(() => {
     router.replace('/(tabs)/quran');
@@ -193,7 +195,7 @@ export function QuranReaderScreen() {
             accessibilityLabel="Back to Quran surah list"
             onPress={returnToSurahList}
           />
-          <VStack gap={0}>
+          <VStack gap={0} style={{ flex: 1 }}>
             <Text variant="headingLg">
               {surah?.nameTransliteration ?? `Surah ${surahId}`}
             </Text>
@@ -203,6 +205,7 @@ export function QuranReaderScreen() {
               </Text>
             ) : null}
           </VStack>
+          <Button label="Play Audio" size="sm" variant="secondary" onPress={() => setAudioSettingsOpen(true)} />
         </HStack>
 
         <SegmentedControl
@@ -224,6 +227,7 @@ export function QuranReaderScreen() {
           ) : (
             <FlashList<Ayah>
               data={detailedAyahs}
+              extraData={bookmarkRefs}
               keyExtractor={(item) => `${item.surahId}-${item.ayahNumber}`}
               estimatedItemSize={140}
               ListHeaderComponent={
@@ -249,35 +253,22 @@ export function QuranReaderScreen() {
                     toggleBookmark.mutate(
                       { contentType: 'quran', contentRef: `${item.surahId}:${item.ayahNumber}` },
                       {
-                        onSuccess: (result) => showToast(
-                          result.added ? 'Verse bookmarked' : 'Bookmark removed',
-                          'success'
-                        ),
                         onError: () => showToast('Could not update bookmark', 'error'),
                       }
                     );
                   }}
                   onPlayAudio={() => {
-                    if (!env.audioBaseUrl) {
-                      showToast('Recitation audio is not configured yet.');
-                      return;
-                    }
-
-                    const audioBaseUrl = env.audioBaseUrl.replace(/\/$/, '');
-                    void playTrack({
-                      id: `${item.surahId}-${item.ayahNumber}`,
-                      title: `${surah?.nameTransliteration ?? `Surah ${item.surahId}`} · Ayah ${item.ayahNumber}`,
-                      uri: `${audioBaseUrl}/audio/qari-default/${item.surahId}/${item.ayahNumber}.mp3`,
-                    }).catch(() => {
-                      showToast('Unable to load this recitation.', 'error');
-                    });
+                    player.start({ start: item.ayahNumber, end: item.ayahNumber, repeat: 0 });
                   }}
                 />
               )}
             />
           )}
         </View>
+        <RecitationControls player={player} state={audioState} onSettings={() => setAudioSettingsOpen(true)} />
       </VStack>
+      {audioSettingsOpen ? <RecitationSettingsSheet key={surahId} count={ayahs.length} initial={audioState.settings}
+        onCancel={() => setAudioSettingsOpen(false)} onPlay={(settings) => { setAudioSettingsOpen(false); player.start(settings); }} /> : null}
     </ScreenWrapper>
   );
 }

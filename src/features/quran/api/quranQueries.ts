@@ -9,6 +9,7 @@ export function useQuranSurahs(): UseQueryResult<Surah[], Error> {
   return useQuery<Surah[], Error>({
     queryKey: quranKeys.surahs(),
     queryFn: () => quranRepository.getAllSurahs(),
+    networkMode: 'always',
     staleTime: Infinity, // bundled reference content — never goes stale within a session
   });
 }
@@ -21,6 +22,7 @@ export function useAyahRange(
   return useQuery<Ayah[], Error>({
     queryKey: quranKeys.ayahRange(surahId, startAyah, count),
     queryFn: () => quranRepository.getAyahRange(surahId as number, startAyah as number, count),
+    networkMode: 'always',
     enabled: surahId !== null && startAyah !== null,
   });
 }

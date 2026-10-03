@@ -15,7 +15,7 @@ interface QuickAction {
 
 const actions: QuickAction[] = [
   { label: 'Continue Reading', icon: 'BookOpen', route: '/(tabs)/quran' },
-  { label: 'Revise Hifz', icon: 'RotateCcw', route: '/(tabs)/hifz/setup' },
+  { label: 'Hifz', icon: 'BookOpenCheck', route: '/(tabs)/hifz' },
   { label: 'Prayer Times', icon: 'Clock', route: '/(tabs)/prayer' },
   { label: 'More', icon: 'Menu', route: '/(tabs)/more' },
 ];

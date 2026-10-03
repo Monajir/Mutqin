@@ -26,8 +26,7 @@ const ayahKey = (ayah: AyahReference) => `${ayah.surahId}-${ayah.ayahNumber}`;
 /**
  * Ephemeral, client-only state for the active Hifz Assistant session
  * (spec §6). Deliberately NOT persisted or synced — a session is either
- * completed (its result is saved via useApplyEvaluationResult /
- * hifzRepository.saveSession) or abandoned. This keeps the "what's on
+ * reviewed or abandoned without changing memorization. This keeps the "what's on
  * screen right now" concern separate from durable progress data in SQLite.
  */
 export const useHifzSessionStore = create<HifzSessionState>((set, get) => ({

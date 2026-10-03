@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import type { HifzProgressEntry } from '../types/hifz.types';
 import { hifzKeys } from './hifzKeys';
 import { hifzRepository } from './hifzRepository';
 import { getJuzAyahCounts } from '@/features/quran';
@@ -13,7 +14,12 @@ export function useHifzOverallStats() {
   return useQuery({
     queryKey: hifzKeys.overallStats(),
     queryFn: () => hifzRepository.getOverallStats(),
+    networkMode: 'always',
   });
+}
+
+export function useManualHifzProgress(): UseQueryResult<HifzProgressEntry[], Error> {
+  return useQuery<HifzProgressEntry[], Error>({ queryKey: hifzKeys.progress(), queryFn: () => hifzRepository.getAllProgress(), networkMode: 'always' });
 }
 
 export function useHifzJuzSummary() {

@@ -31,7 +31,7 @@ function rowToEntry(row: HifzProgressRow): HifzProgressEntry {
  */
 export const hifzRepository = {
   getAllProgress(): HifzProgressEntry[] {
-    const rows = getDb().getAllSync<HifzProgressRow>('SELECT * FROM hifz_progress;');
+    const rows = getDb().getAllSync<HifzProgressRow>("SELECT * FROM hifz_progress WHERE source = 'manual';");
     return rows.map(rowToEntry);
   },
 
@@ -55,7 +55,7 @@ export const hifzRepository = {
       `SELECT a.juz as juz, COUNT(*) as memorized
        FROM hifz_progress hp
        JOIN ayahs a ON a.surah_id = hp.surah_id AND a.ayah_number = hp.ayah_number
-       WHERE hp.status IN ('memorized', 'strong')
+       WHERE hp.source = 'manual' AND hp.status IN ('memorized', 'strong')
        GROUP BY a.juz;`
     );
     const byJuz = new Map(rows.map((r) => [r.juz, r.memorized]));

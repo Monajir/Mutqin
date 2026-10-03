@@ -14,6 +14,7 @@ export interface IconButtonProps {
   accessibilityLabel: string;
   disabled?: boolean;
   variant?: 'ghost' | 'soft';
+  filled?: boolean;
 }
 
 export function IconButton({
@@ -24,6 +25,7 @@ export function IconButton({
   accessibilityLabel,
   disabled,
   variant = 'ghost',
+  filled = false,
 }: IconButtonProps) {
   const { tokens } = useAppTheme();
 
@@ -32,6 +34,7 @@ export function IconButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       disabled={disabled}
+      accessibilityState={{ disabled, selected: filled }}
       haptic
       onPress={onPress}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -45,7 +48,7 @@ export function IconButton({
         justifyContent: 'center',
       }}
     >
-      <Icon name={name} size={size} color={color} />
+      <Icon name={name} size={size} color={color} filled={filled} />
     </Pressable>
   );
 }

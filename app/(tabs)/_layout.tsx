@@ -51,16 +51,8 @@ export default function TabsLayout() {
           options={{ href: null }}
         />
         <Tabs.Screen
-          name="hifz/index"
+          name="hifz"
           options={{ title: 'Hifz', tabBarIcon: ({ color, size }) => <Icon name="Brain" rawColor={color} size={size} /> }}
-        />
-        <Tabs.Screen
-          name="hifz/session"
-          options={{ href: null }}
-        />
-        <Tabs.Screen
-          name="hifz/setup"
-          options={{ href: null }}
         />
         <Tabs.Screen
           name="prayer/index"

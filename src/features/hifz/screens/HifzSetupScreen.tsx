@@ -14,11 +14,11 @@ export function HifzSetupScreen() {
   const beginSession = useHifzSessionStore((s) => s.beginSession);
 
   return (
-    <ScreenWrapper>
+    <ScreenWrapper edges={['left', 'right']}>
       <VStack gap={4} style={{ flex: 1, paddingTop: 16 }}>
-        <Text variant="headingLg">New Hifz Session</Text>
+        <Text variant="headingLg">Choose your passage</Text>
         <Text variant="bodySm" color="secondary">
-          Choose the surah and starting ayah you'll recite from memory.
+          Choose a surah and ayah range to check your recitation. Results do not change your memorization progress.
         </Text>
         {surahs ? (
           <SurahAyahPicker

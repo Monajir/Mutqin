@@ -7,6 +7,7 @@ export { HifzSetupScreen } from './screens/HifzSetupScreen';
 export { HifzSessionScreen } from './screens/HifzSessionScreen';
 export { HifzSummaryScreen } from './screens/HifzSummaryScreen';
 export { HifzTrackerScreen } from './screens/HifzTrackerScreen';
+export { HifzAyahScreen } from './screens/HifzAyahScreen';
 
 export { useHifzOverallStats, useHifzJuzSummary, useHifzRevisionQueue } from './api/hifzQueries';
 export { useUpdateHifzStatus } from './api/hifzMutations';

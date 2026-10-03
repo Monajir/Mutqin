@@ -54,7 +54,7 @@ export function SurahAyahPicker({ surahs, onSelect }: SurahAyahPickerProps) {
           value={endAyahInput}
           onChangeText={setEndAyahInput}
         />
-        <Button label="Start Session" onPress={() => onSelect(selectedSurah.id, ayahNum, endAyahNum)} />
+        <Button label="Check recitation" onPress={() => onSelect(selectedSurah.id, ayahNum, endAyahNum)} />
       </VStack>
     );
   }

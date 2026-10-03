@@ -5,7 +5,6 @@ import { VStack, HStack } from '@/design-system/primitives/Stack';
 import { Text } from '@/design-system/primitives/Text';
 import { Button } from '@/design-system/primitives/Button';
 import { Divider } from '@/design-system/primitives/Divider';
-import { useToast } from '@/design-system/components';
 import { useAppTheme } from '@/design-system/theme';
 import { useAyahRange } from '@/features/quran';
 import { useHifzSessionStore } from '../store/useHifzSessionStore';
@@ -13,19 +12,15 @@ import { useHifzSession } from '../hooks/useHifzSession';
 import { VerseRevealer } from '../components/VerseRevealer';
 import { RecordButton } from '../components/RecordButton';
 import { AccuracySummaryCard } from '../components/AccuracySummaryCard';
-import { useApplyEvaluationResult } from '../api/hifzMutations';
-import { hifzRepository } from '../api/hifzRepository';
 
 /**
  * Main AI Hifz recitation view. The selected range stays hidden while
  * recording, then the evaluation is displayed in place with word-level
- * feedback and save/retry actions.
+ * feedback and retry actions, independent of manual memorization.
  */
 export function HifzSessionScreen() {
   const router = useRouter();
-  const toast = useToast();
   const { tokens } = useAppTheme();
-  const applyEvaluation = useApplyEvaluationResult();
   const { surahId, startAyah, endAyah, revealedWords, phase, result, retrySameRange, reset } = useHifzSessionStore();
 
   const ayahCount = startAyah !== null && endAyah !== null ? endAyah - startAyah + 1 : 0;
@@ -45,15 +40,15 @@ export function HifzSessionScreen() {
 
   if (surahId === null || startAyah === null || endAyah === null) {
     return (
-      <ScreenWrapper>
-        <EmptyState variant="no-data" title="No active session" description="Start a new Hifz session from the Hifz tab." />
+      <ScreenWrapper edges={['left', 'right']}>
+        <EmptyState variant="no-data" title="No active session" description="Choose a passage from the recitation checker." />
       </ScreenWrapper>
     );
   }
 
   if (!ayahs || ayahs.length === 0) {
     return (
-      <ScreenWrapper>
+      <ScreenWrapper edges={['left', 'right']}>
         <EmptyState variant="no-data" title="Loading verses..." />
       </ScreenWrapper>
     );
@@ -62,27 +57,13 @@ export function HifzSessionScreen() {
   const activeAyah = ayahs[0]!;
   const isReviewing = phase === 'summary' && result !== null;
 
-  const acceptResult = async () => {
-    if (!result) return;
-
-    try {
-      await applyEvaluation.mutateAsync(result);
-      hifzRepository.saveSession({
-        id: `${surahId}-${startAyah}-${Date.now()}`,
-        surahId,
-        startAyah,
-        endAyah: result.ayahs.at(-1)?.ayah.ayahNumber ?? null,
-        overallAccuracy: result.overallAccuracy,
-      });
-      reset();
-      router.replace('/(tabs)/hifz');
-    } catch {
-      toast.show('Could not save this result. Please try again.', 'error');
-    }
+  const finish = () => {
+    reset();
+    router.back();
   };
 
   return (
-    <ScreenWrapper scroll>
+    <ScreenWrapper scroll edges={['left', 'right']}>
       <VStack gap={5} style={{ paddingTop: 16, flex: 1 }}>
         <Text variant="bodySm" color="secondary">
           {`Surah ${activeAyah.surahId} · Ayahs ${startAyah}–${endAyah}`}
@@ -122,21 +103,19 @@ export function HifzSessionScreen() {
             </HStack>
             <AccuracySummaryCard result={result} />
             <Text variant="caption" color="secondary">
-              AI may mishear your voice. Red words need review, not necessarily correction. Save only after checking the feedback.
+              AI may mishear your voice. Red words need review, not necessarily correction. This feedback does not change your memorization progress.
             </Text>
             <HStack gap={3}>
               <Button
                 label="Retry"
                 variant="secondary"
                 style={{ flex: 1 }}
-                disabled={applyEvaluation.isPending}
                 onPress={retrySameRange}
               />
               <Button
-                label="Confirm & Save"
+                label="Done"
                 style={{ flex: 1 }}
-                loading={applyEvaluation.isPending}
-                onPress={acceptResult}
+                onPress={finish}
               />
             </HStack>
           </VStack>

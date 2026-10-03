@@ -21,7 +21,8 @@ export function AyahRow({ ayah, showTranslation, isBookmarked, onToggleBookmark,
         <HStack gap={1}>
           <IconButton name="Play" size={16} accessibilityLabel="Play recitation" onPress={onPlayAudio} />
           <IconButton
-            name={isBookmarked ? 'BookmarkCheck' : 'Bookmark'}
+            name="Bookmark"
+            filled={isBookmarked}
             size={16}
             color={isBookmarked ? 'brand' : 'muted'}
             accessibilityLabel={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
