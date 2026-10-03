@@ -36,3 +36,8 @@ mutqin-ai-service/.pytest_cache/
 mutqin-ai-service/**/__pycache__/
 mutqin-ai-service/.venv/
 *.py[cod]
+
+# Local project handoff and setup documents
+/PORTABLE_CONTEXT.md
+/UBUNTU_SETUP.md
+/output/pdf/Mutqin_Terminal_Command_Cheat_Sheet.pdf
