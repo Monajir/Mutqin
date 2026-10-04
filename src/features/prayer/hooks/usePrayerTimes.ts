@@ -79,6 +79,7 @@ export function usePrayerTimes() {
       }
     },
     enabled: locationResolved,
+    networkMode: 'always', // Permit the on-device fallback when offline.
     staleTime: 30 * 60 * 1000,
   });
 

@@ -6,6 +6,7 @@ import type { LastReadPosition } from '../types/quran.types';
 export function useSetLastRead() {
   const queryClient = useQueryClient();
   return useMutation({
+    networkMode: 'always',
     mutationFn: async (position: LastReadPosition) => {
       setJson(StorageKeys.lastReadAyah, position);
       return position;

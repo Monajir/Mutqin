@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState, ScreenWrapper } from '@/components';
 import { HStack, VStack } from '@/design-system/primitives/Stack';
 import { Text } from '@/design-system/primitives/Text';
@@ -14,6 +15,8 @@ import type { Surah } from '@/types';
 
 export function SurahListScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const bottomClearance = 66 + Math.max(12, insets.bottom) + 12;
   const { tokens } = useAppTheme();
   const [query, setQuery] = useState('');
   const { data: surahs, isLoading } = useQuranSurahs();
@@ -26,7 +29,7 @@ export function SurahListScreen() {
   );
 
   return (
-    <ScreenWrapper>
+    <ScreenWrapper contentStyle={{ flex: 1, paddingBottom: 0 }}>
       <VStack gap={4} style={{ flex: 1, paddingTop: 12 }}>
         <VStack gap={1}>
           <Text variant="headingLg">The Noble Quran</Text>
@@ -38,7 +41,9 @@ export function SurahListScreen() {
         {lastRead ? (
           <Pressable
             accessibilityRole="button"
-            onPress={() => router.push(`/(tabs)/quran/${lastRead.surahId}`)}
+            onPress={() => router.push({ pathname: '/(tabs)/quran/[surahId]', params: {
+              surahId: lastRead.surahId, ayah: lastRead.ayahNumber, visit: String(Date.now()),
+            } })}
             style={{
               padding: 14,
               borderRadius: 16,
@@ -73,13 +78,16 @@ export function SurahListScreen() {
           <EmptyState variant="no-results" />
         ) : (
           <FlashList<Surah>
+            contentContainerStyle={{ paddingBottom: bottomClearance }}
             data={filtered}
             keyExtractor={(item) => String(item.id)}
             estimatedItemSize={76}
             renderItem={({ item }) => (
               <SurahListItem
                 surah={item}
-                onPress={() => router.push(`/(tabs)/quran/${item.id}`)}
+                onPress={() => router.push({ pathname: '/(tabs)/quran/[surahId]', params: {
+                  surahId: item.id, ayah: 1, visit: String(Date.now()),
+                } })}
               />
             )}
           />

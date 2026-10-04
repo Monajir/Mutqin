@@ -48,8 +48,11 @@ export function BookmarksScreen() {
 
   const openBookmark = (item: BookmarkListItem) => {
     if (item.contentType === 'quran') {
-      const [surahId] = item.contentRef.split(':');
-      router.push(`/(tabs)/quran/${surahId}` as never);
+      const [surahId, ayah] = item.contentRef.split(':');
+      if (!surahId) return;
+      router.push({ pathname: '/(tabs)/quran/[surahId]', params: {
+        surahId, ayah: ayah ?? '1', visit: String(Date.now()),
+      } });
     } else if (item.contentType === 'hadith' && item.collectionId) {
       router.push(`/(tabs)/more/hadith/${item.collectionId}` as never);
     } else if (item.contentType === 'dua') {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, View, RefreshControl, ViewStyle } from 'react-native';
-import { SafeAreaView, Edge } from 'react-native-safe-area-context';
+import { SafeAreaView, Edge, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { spacing } from '@/design-system/tokens/spacing';
 import { useAppTheme } from '@/design-system/theme';
 
@@ -27,10 +27,11 @@ export function ScreenWrapper({
   contentStyle,
 }: ScreenWrapperProps) {
   const { tokens } = useAppTheme();
+  const insets = useSafeAreaInsets();
 
   const paddingStyle: ViewStyle = {
     paddingHorizontal: spacing[4],
-    paddingBottom: spacing[12] + spacing[10],
+    paddingBottom: Math.max(spacing[12] + spacing[10], 66 + Math.max(12, insets.bottom) + 12),
     flexGrow: 1,
   };
   const atmosphere = (

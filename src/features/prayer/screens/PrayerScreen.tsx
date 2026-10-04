@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { EmptyState, ScreenWrapper } from '@/components';
 import { HStack, VStack } from '@/design-system/primitives/Stack';
@@ -10,9 +10,11 @@ import { PrayerCountdown } from '../components/PrayerCountdown';
 import { PrayerTimesList } from '../components/PrayerTimesList';
 import { PRAYER_CALCULATION_METHODS } from '@/constants';
 import { usePrayerSettingsStore } from '../store/usePrayerSettingsStore';
+import { PrayerToolsSheet } from '../components/PrayerToolsSheet';
 
 export function PrayerScreen() {
   const router = useRouter();
+  const [tool, setTool] = useState<'calculation' | 'forbidden' | null>(null);
   const { data, isLoading, permissionDenied, usingFallbackLocation } = usePrayerTimes();
   const methodId = usePrayerSettingsStore((state) => state.settings.calculationMethodId);
   const methodLabel = PRAYER_CALCULATION_METHODS.find((method) => method.id === methodId)?.label ?? methodId;
@@ -59,12 +61,13 @@ export function PrayerScreen() {
           <Text variant="headingSm">Prayer Tools</Text>
           <Card>
             <ListRow title="Qibla Compass" leadingIcon="Compass" showChevron onPress={() => router.push('/(modals)/qibla')} />
-            <ListRow title="Forbidden Salah Times" leadingIcon="AlertCircle" showChevron onPress={() => {}} />
-            <ListRow title="Calculation" subtitle={methodLabel} leadingIcon="Settings" showChevron onPress={() => {}} />
+            <ListRow title="Forbidden Salah Times" leadingIcon="AlertCircle" showChevron onPress={() => setTool('forbidden')} />
+            <ListRow title="Calculation" subtitle={methodLabel} leadingIcon="Settings" showChevron onPress={() => setTool('calculation')} />
             <ListRow title="Notifications" leadingIcon="Bell" showChevron onPress={() => router.push('/settings/notifications')} />
           </Card>
         </VStack>
       </VStack>
+      {tool ? <PrayerToolsSheet tool={tool} onClose={() => setTool(null)} data={permissionDenied ? undefined : data} usingFallbackLocation={usingFallbackLocation} /> : null}
     </ScreenWrapper>
   );
 }

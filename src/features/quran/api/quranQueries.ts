@@ -49,6 +49,7 @@ export function useDailyQuranVerse(dateKey: string): UseQueryResult<DailyQuranVe
 export function useLastRead() {
   return useQuery({
     queryKey: quranKeys.lastRead(),
+    networkMode: 'always',
     queryFn: () => getJson<LastReadPosition>(StorageKeys.lastReadAyah),
   });
 }

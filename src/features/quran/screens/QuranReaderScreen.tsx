@@ -1,4 +1,4 @@
-import React, { Fragment, useCallback, useMemo, useState } from 'react';
+import React, { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, ScrollView, Text as NativeText, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
@@ -130,9 +130,27 @@ function EnglishBookView({ surahId, ayahs }: { surahId: number; ayahs: Ayah[] })
 
 /** Continuous Arabic, translation-only, and detailed parallel Quran reader. */
 export function QuranReaderScreen() {
+  const params = useLocalSearchParams<{ surahId: string; ayah?: string; visit?: string }>();
+  // Tab routes can be reused. A new navigation must reset the list and mode,
+  // even when another bookmark points to the same surah.
+  return <QuranReaderContent key={`${params.surahId}:${params.ayah ?? 1}:${params.visit ?? ''}`}
+    surahId={Number(params.surahId)} requestedAyah={Number(params.ayah ?? 1)} />;
+}
+
+function QuranReaderContent({ surahId, requestedAyah }: { surahId: number; requestedAyah: number }) {
   const router = useRouter();
-  const { surahId: surahIdParam } = useLocalSearchParams<{ surahId: string }>();
-  const surahId = Number(surahIdParam);
+  const listRef = useRef<FlashList<Ayah>>(null);
+  const viewportRef = useRef<View>(null);
+  const targetRowRef = useRef<View>(null);
+  const scrollOffset = useRef(0);
+  const alignmentTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [viewportHeight, setViewportHeight] = useState(0);
+  const userScrolled = useRef(false);
+  const scrollFrame = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (scrollFrame.current !== null) cancelAnimationFrame(scrollFrame.current);
+    if (alignmentTimer.current !== null) clearTimeout(alignmentTimer.current);
+  }, []);
   const [readerMode, setReaderMode] = useState<ReaderMode>('both');
   const [audioSettingsOpen, setAudioSettingsOpen] = useState(false);
   const { data: surahs } = useQuranSurahs();
@@ -167,6 +185,24 @@ export function QuranReaderScreen() {
     return ayahs.map(withoutBasmalaPrefix);
   }, [ayahs, surahId]);
   const bookmarkedRefs = useMemo(() => new Set(bookmarkRefs), [bookmarkRefs]);
+  const targetIndex = Math.max(0, detailedAyahs.findIndex((ayah) => ayah.ayahNumber === requestedAyah));
+  const alignTarget = useCallback(() => {
+    if (userScrolled.current || targetIndex === 0) return;
+    if (scrollFrame.current !== null) cancelAnimationFrame(scrollFrame.current);
+    scrollFrame.current = requestAnimationFrame(() => {
+      // Estimated offsets drift as Arabic/translation rows are measured.
+      // Align the actual rendered row with the actual viewport instead.
+      viewportRef.current?.measureInWindow((_x, viewportY, _width, height) => {
+        targetRowRef.current?.measureInWindow((_rowX, rowY, _rowWidth, rowHeight) => {
+          if (userScrolled.current || height <= 0 || rowHeight <= 0) return;
+          const delta = rowY - viewportY;
+          if (Math.abs(delta) > 2) {
+            listRef.current?.scrollToOffset({ offset: Math.max(0, scrollOffset.current + delta), animated: false });
+          }
+        });
+      });
+    });
+  }, [targetIndex]);
 
   if (isLoading) {
     return (
@@ -219,13 +255,39 @@ export function QuranReaderScreen() {
           ]}
         />
 
-        <View style={{ flex: 1 }}>
+        <View ref={viewportRef} collapsable={false} style={{ flex: 1 }} onLayout={(event) => {
+          setViewportHeight(event.nativeEvent.layout.height);
+          alignTarget();
+        }}>
           {readerMode === 'arabic' ? (
             <ArabicMushafView surahId={surahId} ayahs={ayahs} />
           ) : readerMode === 'english' ? (
             <EnglishBookView surahId={surahId} ayahs={ayahs} />
           ) : (
             <FlashList<Ayah>
+              ref={listRef}
+              initialScrollIndex={targetIndex}
+              onLoad={() => {
+                // Correct for the header and measured variable-height ayahs.
+                alignTarget();
+                const target = detailedAyahs[targetIndex];
+                if (target && !userScrolled.current) setLastRead.mutate({
+                  surahId, ayahNumber: target.ayahNumber,
+                  surahName: surah?.nameTransliteration ?? `Surah ${surahId}`,
+                  updatedAt: new Date().toISOString(),
+                });
+              }}
+              onScrollBeginDrag={() => { userScrolled.current = true; }}
+              onScroll={(event) => {
+                scrollOffset.current = event.nativeEvent.contentOffset.y;
+                if (!userScrolled.current) {
+                  if (alignmentTimer.current !== null) clearTimeout(alignmentTimer.current);
+                  alignmentTimer.current = setTimeout(alignTarget, 80);
+                }
+              }}
+              scrollEventThrottle={16}
+              onContentSizeChange={alignTarget}
+              contentContainerStyle={{ paddingBottom: viewportHeight }}
               data={detailedAyahs}
               extraData={bookmarkRefs}
               keyExtractor={(item) => `${item.surahId}-${item.ayahNumber}`}
@@ -235,7 +297,9 @@ export function QuranReaderScreen() {
               }
               onViewableItemsChanged={({ viewableItems }) => {
                 const first = viewableItems[0]?.item;
-                if (first) {
+                // Initial measurement callbacks can report ayah 1 before the
+                // requested jump. Only track subsequent user-driven scrolling.
+                if (first && userScrolled.current) {
                   setLastRead.mutate({
                     surahId: first.surahId,
                     ayahNumber: first.ayahNumber,
@@ -244,7 +308,9 @@ export function QuranReaderScreen() {
                   });
                 }
               }}
-              renderItem={({ item }) => (
+              renderItem={({ item, index, target }) => (
+                <View collapsable={false} ref={index === targetIndex && target === 'Cell' ? targetRowRef : undefined}
+                  onLayout={index === targetIndex && target === 'Cell' ? alignTarget : undefined}>
                 <AyahRow
                   ayah={item}
                   showTranslation
@@ -261,6 +327,7 @@ export function QuranReaderScreen() {
                     player.start({ start: item.ayahNumber, end: item.ayahNumber, repeat: 0 });
                   }}
                 />
+                </View>
               )}
             />
           )}
