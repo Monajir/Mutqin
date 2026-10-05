@@ -15,7 +15,7 @@ export function AudioPlayerBar() {
   const progress = durationSec > 0 ? positionSec / durationSec : 0;
 
   return (
-    <Surface elevationLevel="medium" p={3} rounded="lg" style={{ marginHorizontal: 12, marginBottom: 8 }}>
+    <Surface polished elevationLevel="medium" p={3} rounded="xl" style={{ marginHorizontal: 12, marginBottom: 8 }}>
       <HStack gap={3} justify="space-between">
         <VStack style={{ flex: 1 }} gap={1}>
           <Text variant="bodySm" weight="600" numberOfLines={1}>
@@ -26,6 +26,8 @@ export function AudioPlayerBar() {
         <HStack gap={2}>
           <IconButton
             name={isPlaying ? 'Pause' : 'Play'}
+            variant="soft"
+            color="brand"
             accessibilityLabel={isPlaying ? 'Pause' : 'Play'}
             onPress={togglePlayback}
           />

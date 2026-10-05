@@ -6,6 +6,7 @@ import { HStack, VStack } from '@/design-system/primitives/Stack';
 import { Button } from '@/design-system/primitives/Button';
 import { IconButton } from '@/design-system/primitives/IconButton';
 import { Input } from '@/design-system/primitives/Input';
+import { SurfaceSheen } from '@/design-system/primitives/SurfaceSheen';
 import { Card, ProgressBar } from '@/design-system/components';
 import { useAppTheme } from '@/design-system/theme';
 import { REPEAT_OPTIONS, validSettings, cycleProgress, type Repeat, type RecitationSettings, type RecitationPlayer, type PlayerState } from '../audio/RecitationPlayer';
@@ -49,7 +50,7 @@ export function RecitationSettingsSheet({ count, initial, onCancel, onPlay }: {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.55)' }}>
         <Pressable accessibilityLabel="Close audio settings" accessibilityRole="button" onPress={onCancel} style={{ position: 'absolute', top: 0, bottom: 0, right: 0, left: 0 }} />
-        <View accessibilityViewIsModal style={{ maxHeight: '85%', backgroundColor: tokens.background.elevated, borderTopLeftRadius: 28, borderTopRightRadius: 28 }}>
+        <View accessibilityViewIsModal style={{ maxHeight: '85%', backgroundColor: tokens.background.elevated, borderTopLeftRadius: 28, borderTopRightRadius: 28, borderTopWidth: 1, borderColor: tokens.border.strong }}>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 24, paddingBottom: Math.max(insets.bottom, 16) + 12 }}>
             <VStack gap={4}>
               <View style={{ alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: tokens.border.strong }} />
@@ -66,8 +67,9 @@ export function RecitationSettingsSheet({ count, initial, onCancel, onPlay }: {
                   accessibilityLabel={option === 0 ? 'No repeats' : option === 'infinite' ? 'Repeat infinitely' : `Repeat ${option} times`}
                   onPress={() => setRepeat(option)} style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1,
                     borderColor: repeat === option ? tokens.brand.primary : tokens.border.strong,
-                    backgroundColor: repeat === option ? tokens.brand.primary : tokens.background.secondary }}>
-                  <Text variant="bodySm" color={repeat === option ? 'inverse' : 'primary'}>{option === 0 ? 'None' : option === 'infinite' ? 'Infinite' : option}</Text>
+                    backgroundColor: repeat === option ? tokens.background.elevated : tokens.background.secondary }}>
+                  {repeat === option ? <SurfaceSheen radius={20} /> : null}
+                  <Text variant="bodySm" weight={repeat === option ? '600' : '400'} color={repeat === option ? 'brand' : 'primary'}>{option === 0 ? 'None' : option === 'infinite' ? 'Infinite' : option}</Text>
                 </Pressable>)}
               </HStack>
               <Text variant="caption" color="secondary">{repeat === 'infinite' ? 'The selected passage loops until you stop it.' : `The whole passage plays ${repeat + 1} ${repeat === 0 ? 'time' : 'times'} (${repeat} additional repeats).`}</Text>

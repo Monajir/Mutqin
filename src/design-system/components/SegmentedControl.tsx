@@ -5,6 +5,7 @@ import { Text } from '../primitives/Text';
 import { spacing } from '../tokens/spacing';
 import { radii } from '../tokens/radii';
 import { useAppTheme } from '../theme';
+import { SurfaceSheen } from '../primitives/SurfaceSheen';
 
 export interface SegmentedControlProps<T extends string> {
   options: { value: T; label: string }[];
@@ -19,7 +20,7 @@ export function SegmentedControl<T extends string>({
   onChange,
   compact = false,
 }: SegmentedControlProps<T>) {
-  const { tokens } = useAppTheme();
+  const { tokens, themeName } = useAppTheme();
 
   return (
     <View
@@ -32,6 +33,7 @@ export function SegmentedControl<T extends string>({
         borderColor: tokens.border.subtle,
       }}
     >
+      <SurfaceSheen radius={radii.pill} />
       {options.map((opt) => {
         const active = opt.value === value;
         return (
@@ -45,11 +47,14 @@ export function SegmentedControl<T extends string>({
               paddingVertical: compact ? 6 : spacing[2],
               paddingHorizontal: compact ? spacing[3] : spacing[2],
               borderRadius: radii.pill,
-              backgroundColor: active ? tokens.brand.primary : 'transparent',
+              backgroundColor: active ? tokens.background.elevated : 'transparent',
+              borderWidth: 1,
+              borderColor: active ? (themeName === 'dark' ? 'rgba(255,255,255,0.24)' : tokens.border.strong) : 'transparent',
               alignItems: 'center',
             }}
           >
-            <Text variant={compact ? 'caption' : 'bodySm'} weight="600" color={active ? 'inverse' : 'secondary'}>
+            {active ? <SurfaceSheen radius={radii.pill} /> : null}
+            <Text variant={compact ? 'caption' : 'bodySm'} weight="600" color={active ? 'brand' : 'secondary'}>
               {opt.label}
             </Text>
           </Pressable>

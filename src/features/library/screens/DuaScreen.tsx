@@ -80,7 +80,7 @@ export function DuaScreen() {
             estimatedItemSize={410}
             ItemSeparatorComponent={() => <VStack style={{ height: 12 }} />}
             renderItem={({ item }) => (
-              <Card>
+              <Card polished={false}>
                 <VStack gap={3}>
                   <HStack justify="space-between" gap={2} wrap>
                     <VStack gap={1} style={{ flex: 1 }}>

@@ -5,6 +5,7 @@ import { IconButton } from '../primitives/IconButton';
 import { spacing } from '../tokens/spacing';
 import { radii } from '../tokens/radii';
 import { useAppTheme } from '../theme';
+import { SurfaceSheen } from '../primitives/SurfaceSheen';
 
 export interface SearchBarProps {
   value: string;
@@ -42,13 +43,14 @@ export function SearchBar({
         alignItems: 'center',
         gap: spacing[2],
         backgroundColor: tokens.background.secondary,
-        borderRadius: radii.md,
+        borderRadius: radii.lg,
         paddingHorizontal: spacing[3],
         height: 44,
         borderWidth: 1,
         borderColor: tokens.border.subtle,
       }}
     >
+      <SurfaceSheen radius={radii.lg} />
       <Icon name="Search" size={18} color="muted" />
       <TextInput
         autoFocus={autoFocus}

@@ -5,6 +5,7 @@ import { Text } from './Text';
 import { spacing } from '../tokens/spacing';
 import { radii } from '../tokens/radii';
 import { useAppTheme } from '../theme';
+import { SurfaceSheen } from './SurfaceSheen';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'destructive';
 export type ButtonSize = 'sm' | 'md' | 'lg';
@@ -57,7 +58,7 @@ export function Button({
     backgroundColor: bg,
     paddingVertical: dims.paddingV,
     paddingHorizontal: dims.paddingH,
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -77,6 +78,7 @@ export function Button({
       onPress={onPress}
       style={[style, customStyle]}
     >
+      {variant === 'secondary' ? <SurfaceSheen radius={radii.lg} /> : null}
       {loading ? (
         <ActivityIndicator color={fg} size="small" />
       ) : (

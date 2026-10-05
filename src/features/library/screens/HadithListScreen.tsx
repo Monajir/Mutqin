@@ -76,7 +76,7 @@ export function HadithListScreen() {
               />
             ) : null}
             renderItem={({ item }) => (
-              <Card>
+              <Card polished={false}>
                 <VStack gap={3}>
                   <HStack justify="space-between" gap={2} wrap>
                     <Text variant="caption" color="brand" weight="700">{item.reference}</Text>

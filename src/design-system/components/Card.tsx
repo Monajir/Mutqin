@@ -10,12 +10,13 @@ export interface CardProps {
   padded?: boolean;
   testID?: string;
   style?: StyleProp<ViewStyle>;
+  polished?: boolean;
 }
 
 /** Standard content card used for Hadith cards, Dua cards, Home widgets, etc. */
-export function Card({ children, onPress, padded = true, testID, style }: CardProps) {
+export function Card({ children, onPress, padded = true, polished = true, testID, style }: CardProps) {
   const content = (
-    <Surface elevationLevel="low" p={padded ? 4 : undefined} testID={testID} style={style}>
+    <Surface polished={polished} rounded={polished ? 'xl' : 'lg'} elevationLevel="low" p={padded ? 4 : undefined} testID={testID} style={style}>
       {children}
     </Surface>
   );
@@ -23,8 +24,10 @@ export function Card({ children, onPress, padded = true, testID, style }: CardPr
   if (!onPress) return content;
 
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" style={{ borderRadius: 16 }}>
+    <Pressable onPress={onPress} accessibilityRole="button" style={{ borderRadius: polished ? 24 : 16 }}>
       <Surface
+        polished={polished}
+        rounded={polished ? 'xl' : 'lg'}
         elevationLevel="low"
         p={padded ? 4 : undefined}
         testID={testID}

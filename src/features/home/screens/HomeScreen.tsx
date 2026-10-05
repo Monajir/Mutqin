@@ -7,6 +7,7 @@ import { Icon } from '@/design-system/primitives/Icon';
 import { IconButton } from '@/design-system/primitives/IconButton';
 import { Card, Skeleton, useToast } from '@/design-system/components';
 import { useAppTheme } from '@/design-system/theme';
+import { fontFamilies } from '@/design-system/tokens/typography';
 import { formatTime } from '@/lib/dateTime';
 import { useHomeData } from '../api/useHomeData';
 import { DailyVerseCard } from '../components/DailyVerseCard';
@@ -38,9 +39,10 @@ export function HomeScreen() {
     <ScreenWrapper scroll>
       <VStack gap={5} style={{ paddingTop: 12 }}>
         <HStack justify="space-between" align="center">
-          <VStack gap={1}>
-            <ArabicText variant="ui" size={24} lineHeight={34}>
-              السَّلَامُ عَلَيْكُمْ
+          <VStack gap={2} style={{ flex: 1, marginRight: 16 }}>
+            <ArabicText variant="ui" size={30} lineHeight={44}
+              style={{ fontFamily: fontFamilies.quran, textAlign: 'left', color: tokens.brand.primary }}>
+              السلام عليكم
             </ArabicText>
             <Text variant="bodySm" color="secondary">{hijriDate}</Text>
           </VStack>
@@ -80,7 +82,7 @@ export function HomeScreen() {
                 </VStack>
               </HStack>
 
-              <HStack justify="space-between">
+              <HStack justify="space-between" align="stretch">
                 {prayerTimes.prayers.map((prayer: PrayerTimeEntry) => {
                   const active = prayer.name === prayerTimes.nextPrayer;
                   return (
@@ -88,24 +90,31 @@ export function HomeScreen() {
                       key={prayer.name}
                       gap={1}
                       align="center"
+                      accessible
+                      accessibilityLabel={`${prayer.name}, ${formatTime(new Date(prayer.time))}${active ? ', next prayer' : ''}`}
                       style={{
-                        minWidth: 52,
-                        paddingVertical: 8,
-                        borderRadius: 18,
-                        backgroundColor: active ? tokens.brand.primary : 'transparent',
+                        flex: 1,
+                        minWidth: 0,
+                        paddingTop: 8,
+                        paddingBottom: 18,
                       }}
                     >
                       <Icon
                         name={prayerIcons[prayer.name]}
                         size={17}
-                        color={active ? 'inverse' : 'secondary'}
+                        color={active ? 'brand' : 'secondary'}
                       />
-                      <Text variant="caption" color={active ? 'inverse' : 'secondary'} weight="600">
+                      <Text variant="caption" color={active ? 'brand' : 'secondary'} weight="600" numberOfLines={1} adjustsFontSizeToFit>
                         {prayer.name}
                       </Text>
-                      <Text variant="caption" color={active ? 'inverse' : 'muted'}>
+                      <Text variant="caption" color={active ? 'primary' : 'muted'}
+                        weight={active ? '600' : '400'} style={{ textAlign: 'center', marginTop: 3 }}>
                         {formatTime(new Date(prayer.time))}
                       </Text>
+                      {active ? <View pointerEvents="none" style={{
+                        position: 'absolute', bottom: 2, width: 24, height: 3,
+                        borderRadius: 2, backgroundColor: tokens.brand.primary,
+                      }} /> : null}
                     </VStack>
                   );
                 })}

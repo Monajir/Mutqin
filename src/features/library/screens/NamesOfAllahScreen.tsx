@@ -49,7 +49,7 @@ export function NamesOfAllahScreen() {
             estimatedItemSize={210}
             ItemSeparatorComponent={() => <VStack style={{ height: 12 }} />}
             renderItem={({ item }) => (
-              <Card>
+              <Card polished={false}>
                 <VStack gap={3}>
                   <HStack justify="space-between" align="flex-start" gap={3}>
                     <VStack gap={1} style={{ flex: 1 }}>

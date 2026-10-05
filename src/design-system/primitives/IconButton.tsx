@@ -5,6 +5,7 @@ import { Icon, type IconName } from './Icon';
 import { radii } from '../tokens/radii';
 import { spacing } from '../tokens/spacing';
 import { useAppTheme } from '../theme';
+import { SurfaceSheen } from './SurfaceSheen';
 
 export interface IconButtonProps {
   name: IconName;
@@ -48,6 +49,7 @@ export function IconButton({
         justifyContent: 'center',
       }}
     >
+      {variant === 'soft' ? <SurfaceSheen radius={radii.pill} /> : null}
       <Icon name={name} size={size} color={color} filled={filled} />
     </Pressable>
   );
