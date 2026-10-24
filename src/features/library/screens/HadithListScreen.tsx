@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { BackHandler } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -18,11 +18,13 @@ const PAGE_SIZE = 30;
 export function HadithListScreen() {
   const router = useRouter();
   const { show: showToast } = useToast();
-  const params = useLocalSearchParams<{ collectionId: string }>();
+  const params = useLocalSearchParams<{ collectionId: string; reference?: string }>();
   const collectionId = Array.isArray(params.collectionId) ? params.collectionId[0] ?? '' : params.collectionId ?? '';
-  const [query, setQuery] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const reference = typeof params.reference === 'string' ? params.reference : '';
+  const [query, setQuery] = useState(reference);
+  const [searchQuery, setSearchQuery] = useState(reference);
   const [limit, setLimit] = useState(PAGE_SIZE);
+  useEffect(() => { setQuery(reference); setSearchQuery(reference); setLimit(PAGE_SIZE); }, [reference, collectionId]);
   const { data: collections = [] } = useHadithCollections();
   const collection = collections.find((item: HadithCollection) => item.id === collectionId);
   const { data = [], isLoading, isError, refetch } = useHadiths(collectionId, searchQuery, limit);

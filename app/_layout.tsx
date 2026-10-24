@@ -14,6 +14,7 @@ import { initializeDatabase } from '@/services/storage/sqlite';
 import { initConnectivityListener } from '@/stores';
 import { useAppStore } from '@/stores';
 import { View } from 'react-native';
+import { NotificationBootstrap } from '@/features/notifications';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -29,6 +30,7 @@ function RootNavigator() {
   return (
     <View style={{ flex: 1 }}>
       <OfflineBanner />
+      <NotificationBootstrap />
       <ErrorBoundary>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />

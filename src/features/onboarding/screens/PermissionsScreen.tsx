@@ -1,6 +1,7 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
-import * as Notifications from 'expo-notifications';
+import { Alert } from 'react-native';
+import { setNotificationsEnabled, openNotificationSettings } from '@/features/notifications';
 import * as Location from 'expo-location';
 import { ScreenWrapper } from '@/components';
 import { VStack } from '@/design-system/primitives/Stack';
@@ -55,7 +56,14 @@ export function PermissionsScreen() {
             <Button
               label="Allow Notifications"
               variant="secondary"
-              onPress={() => Notifications.requestPermissionsAsync()}
+              onPress={async () => {
+                try {
+                  if (!await setNotificationsEnabled(true)) Alert.alert('Notifications blocked', 'Allow notifications in your phone settings.', [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Open settings', onPress: () => { void openNotificationSettings().catch(() => Alert.alert('Could not open settings')); } },
+                  ]);
+                } catch { Alert.alert('Could not enable notifications', 'Please try again from Settings.'); }
+              }}
             />
           </VStack>
         </VStack>

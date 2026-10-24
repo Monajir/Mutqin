@@ -1,4 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
+import { ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { EmptyState, ScreenWrapper } from '@/components';
 import { VStack, HStack } from '@/design-system/primitives/Stack';
@@ -11,6 +13,7 @@ import { useHifzSessionStore } from '../store/useHifzSessionStore';
 import { useHifzSession } from '../hooks/useHifzSession';
 import { VerseRevealer } from '../components/VerseRevealer';
 import { RecordButton } from '../components/RecordButton';
+import { RecordingControlsBackground } from '../components/RecordingControlsBackground';
 import { AccuracySummaryCard } from '../components/AccuracySummaryCard';
 
 /**
@@ -21,6 +24,10 @@ import { AccuracySummaryCard } from '../components/AccuracySummaryCard';
 export function HifzSessionScreen() {
   const router = useRouter();
   const { tokens } = useAppTheme();
+  const insets = useSafeAreaInsets();
+  const [recordControlsHeight, setRecordControlsHeight] = useState(160);
+  // Match the floating tab bar's 66px height and bottom inset, plus a 12px gap.
+  const controlsBottom = 66 + Math.max(12, insets.bottom) + 12;
   const { surahId, startAyah, endAyah, revealedWords, phase, result, retrySameRange, reset } = useHifzSessionStore();
 
   const ayahCount = startAyah !== null && endAyah !== null ? endAyah - startAyah + 1 : 0;
@@ -63,8 +70,13 @@ export function HifzSessionScreen() {
   };
 
   return (
-    <ScreenWrapper scroll edges={['left', 'right']}>
-      <VStack gap={5} style={{ paddingTop: 16, flex: 1 }}>
+    <ScreenWrapper edges={['left', 'right']} contentStyle={{ flex: 1, paddingHorizontal: 0, paddingBottom: 0 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: controlsBottom + (isReviewing ? 16 : recordControlsHeight + 16) }}
+        keyboardShouldPersistTaps="handled"
+      >
+      <VStack gap={5}>
         <Text variant="bodySm" color="secondary">
           {`Surah ${activeAyah.surahId} · Ayahs ${startAyah}–${endAyah}`}
         </Text>
@@ -120,8 +132,17 @@ export function HifzSessionScreen() {
               />
             </HStack>
           </VStack>
-        ) : (
-          <VStack align="center" style={{ marginTop: 'auto', paddingVertical: 24 }}>
+        ) : null}
+      </VStack>
+      </ScrollView>
+      {!isReviewing ? (
+        <VStack align="center"
+          onLayout={(event) => setRecordControlsHeight(event.nativeEvent.layout.height)}
+          style={{ position: 'absolute', left: 16, right: 16, bottom: controlsBottom,
+            paddingVertical: 12, paddingHorizontal: 16, borderRadius: 24,
+            backgroundColor: 'transparent', overflow: 'hidden',
+            borderWidth: 1, borderColor: tokens.border.subtle }}>
+            <RecordingControlsBackground />
             <RecordButton
               isRecording={session.isRecording}
               disabled={session.isEvaluating || expectedAyahs.length === 0}
@@ -139,9 +160,8 @@ export function HifzSessionScreen() {
                 {session.recorderErrorMessage}
               </Text>
             ) : null}
-          </VStack>
-        )}
-      </VStack>
+        </VStack>
+      ) : null}
     </ScreenWrapper>
   );
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { View } from 'react-native';
 import { ArabicText, ScreenWrapper } from '@/components';
 import { HStack, VStack } from '@/design-system/primitives/Stack';
@@ -17,6 +17,8 @@ import { QuickActions } from '../components/QuickActions';
 import { formatCountdown } from '@/features/prayer';
 import { useBookmarkRefs, useToggleBookmark } from '@/features/bookmarks';
 import type { PrayerTimeEntry } from '@/features/prayer';
+import { useNotificationSettingsStore } from '@/stores';
+import { useNotificationStatus, setNotificationsEnabled, NotificationStatusMessage } from '@/features/notifications';
 
 const prayerIcons = {
   Fajr: 'CloudSun',
@@ -33,9 +35,30 @@ export function HomeScreen() {
   const { prayerTimes, hifzStats, dailyVerse, dailyHadith, hijriDate } = useHomeData();
   const { data: quranBookmarkRefs = [] } = useBookmarkRefs('quran');
   const toggleBookmark = useToggleBookmark();
+  const notificationsWanted = useNotificationSettingsStore((s) => s.settings.enabled);
+  const permission = useNotificationStatus((s) => s.permission);
+  const notificationBusy = useNotificationStatus((s) => s.busy);
+  const [togglingNotifications, setTogglingNotifications] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState<{ id: number; enabled: boolean; error?: string } | null>(null);
+  const dismissNotificationMessage = useCallback(() => setNotificationMessage(null), []);
+  const notificationsEnabled = notificationsWanted && permission === 'granted';
+  const toggleNotifications = async () => {
+    setTogglingNotifications(true);
+    setNotificationMessage(null);
+    try {
+      const next = !notificationsEnabled;
+      const allowed = await setNotificationsEnabled(next);
+      const schedulingError = useNotificationStatus.getState().error;
+      setNotificationMessage({ id: Date.now(), enabled: allowed && next,
+        error: !allowed ? 'Allow notifications in your phone settings to enable reminders.' : schedulingError ?? undefined });
+    } catch {
+      setNotificationMessage({ id: Date.now(), enabled: notificationsEnabled, error: 'Could not update notifications. Please try again.' });
+    } finally { setTogglingNotifications(false); }
+  };
   const dailyVerseRef = dailyVerse ? `${dailyVerse.surahId}:${dailyVerse.ayahNumber}` : '';
 
   return (
+    <>
     <ScreenWrapper scroll>
       <VStack gap={5} style={{ paddingTop: 12 }}>
         <HStack justify="space-between" align="center">
@@ -46,7 +69,14 @@ export function HomeScreen() {
             </ArabicText>
             <Text variant="bodySm" color="secondary">{hijriDate}</Text>
           </VStack>
-          <IconButton name="Bell" variant="soft" accessibilityLabel="Notifications" />
+          <IconButton
+            name={notificationsEnabled ? 'BellRing' : 'BellOff'}
+            variant="soft"
+            color={notificationsEnabled ? 'brand' : 'muted'}
+            accessibilityLabel={notificationsEnabled ? 'Notifications on. Turn off' : 'Notifications off. Turn on'}
+            disabled={togglingNotifications || notificationBusy || permission === 'unknown'}
+            onPress={() => { void toggleNotifications(); }}
+          />
         </HStack>
 
         {prayerTimes ? (
@@ -163,5 +193,7 @@ export function HomeScreen() {
         )}
       </VStack>
     </ScreenWrapper>
+    {notificationMessage ? <NotificationStatusMessage key={notificationMessage.id} enabled={notificationMessage.enabled} error={notificationMessage.error} onDismiss={dismissNotificationMessage} /> : null}
+    </>
   );
 }

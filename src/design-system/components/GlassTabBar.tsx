@@ -5,12 +5,14 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { Icon, type IconName } from '../primitives/Icon';
 import { useAppTheme } from '../theme';
 
-// SDK 51 view metadata lets existing development APKs use the translucent
-// fallback until rebuilt with expo-blur. Do not load a missing native view.
-const hasNativeBlur = Platform.OS === 'web' || Boolean(
+// SDK 51's experimental Android blur can leave pushed native-stack screens
+// covered by a blank surface. Keep the styled fallback there, even when the
+// rebuilt APK includes ExpoBlurView. Also avoid loading missing native views.
+const hasNativeBlur = Platform.OS !== 'android' && (Platform.OS === 'web' || Boolean(
   NativeModules.NativeUnimoduleProxy?.viewManagersMetadata?.ExpoBlurView,
-);
+));
 const NativeBlur: React.ComponentType<BlurViewProps> | null = hasNativeBlur
+  // eslint-disable-next-line @typescript-eslint/no-var-requires -- Optional native view must not load on unsupported clients.
   ? require('expo-blur').BlurView
   : null;
 
@@ -32,7 +34,7 @@ export function GlassTabBackground() {
     borderColor: dark ? 'rgba(255,255,255,0.24)' : 'rgba(255,255,255,0.8)',
   }]}>
     {NativeBlur && blurEnabled ? <NativeBlur tint={dark ? 'dark' : 'light'} intensity={90}
-      experimentalBlurMethod="dimezisBlurView" blurReductionFactor={4} style={StyleSheet.absoluteFill} /> : null}
+      style={StyleSheet.absoluteFill} /> : null}
     {/* The tint must sit ABOVE the blur so legibility does not depend on the
         Android blur renderer or the contrast of the content underneath. */}
     {blurEnabled ? <View style={[StyleSheet.absoluteFill, {

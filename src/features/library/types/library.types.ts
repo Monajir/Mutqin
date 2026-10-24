@@ -23,6 +23,8 @@ export interface Hadith {
 }
 
 export interface DailyHadith {
+  collectionId: string;
+  reference: string;
   excerpt: string;
   source: string;
 }

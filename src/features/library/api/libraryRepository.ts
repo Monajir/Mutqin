@@ -68,15 +68,15 @@ export const libraryRepository = {
     if (count === 0) return null;
 
     const offset = ((dayNumberFromDateKey(dateKey) % count) + count) % count;
-    const row = db.getFirstSync<{ text_translation: string; reference: string }>(
-      `SELECT text_translation, reference
+    const row = db.getFirstSync<{ text_translation: string; reference: string; collection_id: string }>(
+      `SELECT text_translation, reference, collection_id
        FROM hadiths
        WHERE ${filter}
        ORDER BY collection_id, CAST(hadith_number AS INTEGER), id
        LIMIT 1 OFFSET ?;`,
       offset
     );
-    return row ? { excerpt: row.text_translation, source: row.reference } : null;
+    return row ? { excerpt: row.text_translation, source: row.reference, collectionId: row.collection_id, reference: row.reference } : null;
   },
 
   getHadithCollections(): HadithCollection[] {

@@ -2,6 +2,12 @@ import { create } from 'zustand';
 import { getJson, setJson, StorageKeys } from '@/services/storage/mmkv';
 
 export interface NotificationSettings {
+  dailyVerseTime: string;
+  dailyHadithTime: string;
+  fridayTime: string;
+  morningOffsetMinutes: number;
+  eveningOffsetMinutes: number;
+  enabled: boolean;
   prayerReminders: boolean;
   morningAdhkar: boolean;
   eveningAdhkar: boolean;
@@ -13,14 +19,20 @@ export interface NotificationSettings {
 }
 
 const defaults: NotificationSettings = {
+  dailyVerseTime: '09:00',
+  dailyHadithTime: '18:00',
+  fridayTime: '08:00',
+  morningOffsetMinutes: 20,
+  eveningOffsetMinutes: 20,
+  enabled: false,
   prayerReminders: true,
-  morningAdhkar: true,
-  eveningAdhkar: true,
-  dailyVerse: true,
-  dailyHadith: true,
-  hifzRevisionReminder: true,
-  missedRevisionReminder: true,
-  fridayReminder: true,
+  morningAdhkar: false,
+  eveningAdhkar: false,
+  dailyVerse: false,
+  dailyHadith: false,
+  hifzRevisionReminder: false,
+  missedRevisionReminder: false,
+  fridayReminder: false,
 };
 
 interface NotificationSettingsState {
@@ -29,7 +41,7 @@ interface NotificationSettingsState {
 }
 
 export const useNotificationSettingsStore = create<NotificationSettingsState>((set, get) => ({
-  settings: getJson<NotificationSettings>(StorageKeys.notificationSettings) ?? defaults,
+  settings: { ...defaults, ...getJson<Partial<NotificationSettings>>(StorageKeys.notificationSettings) },
   setSetting: (key, value) => {
     const next = { ...get().settings, [key]: value };
     setJson(StorageKeys.notificationSettings, next);

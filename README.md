@@ -165,7 +165,7 @@ pytest tests/ -v
 - Validate, deploy, and secure the Hifz evaluation backend
 - Implement authentication and cloud synchronization
 - Configure a reliable Quran recitation audio host
-- Complete notification scheduling and prayer-setting controls
+- Extend [local notifications](NOTIFICATIONS.md) with precise prayer alarms, background schedule replenishment, and revision reminders; complete prayer-setting controls
 - Add broader automated mobile tests, accessibility review, and translation coverage
 - Perform release QA and prepare production builds
 

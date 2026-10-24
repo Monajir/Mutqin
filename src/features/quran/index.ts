@@ -6,3 +6,5 @@ export { useSetLastRead } from './api/quranMutations';
 export { getJuzAyahCounts } from './api/quranRepository';
 
 export type { DailyQuranVerse, SurahListItemVm, LastReadPosition, QuranSearchResult } from './types/quran.types';
+
+export { quranRepository } from './api/quranRepository';

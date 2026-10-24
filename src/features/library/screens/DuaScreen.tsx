@@ -1,7 +1,7 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { BackHandler, ScrollView } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArabicText, EmptyState, ScreenWrapper } from '@/components';
 import { Badge, Card, SearchBar, SkeletonListRow, useToast } from '@/design-system/components';
 import { Pressable } from '@/design-system/primitives/Pressable';
@@ -18,7 +18,10 @@ export function DuaScreen() {
   const router = useRouter();
   const { tokens } = useAppTheme();
   const { show: showToast } = useToast();
-  const [categoryId, setCategoryId] = useState<string | null>(null);
+  const { category } = useLocalSearchParams<{ category?: string }>();
+  const reminderCategory = category === 'morning-adhkar' || category === 'evening-adhkar' ? category : null;
+  const [categoryId, setCategoryId] = useState<string | null>(reminderCategory);
+  useEffect(() => { setCategoryId(reminderCategory); }, [reminderCategory]);
   const [query, setQuery] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const { data: categories = [] } = useDuaCategories();

@@ -1,15 +1,12 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper } from '@/components';
-import { HStack, VStack } from '@/design-system/primitives/Stack';
+import { VStack } from '@/design-system/primitives/Stack';
 import { Text } from '@/design-system/primitives/Text';
-import { Icon } from '@/design-system/primitives/Icon';
 import { Card, ListRow } from '@/design-system/components';
-import { useAppTheme } from '@/design-system/theme';
 
 export default function MoreScreen() {
   const router = useRouter();
-  const { tokens } = useAppTheme();
 
   return (
     <ScreenWrapper scroll>
@@ -18,34 +15,6 @@ export default function MoreScreen() {
           <Text variant="headingLg">Discover</Text>
           <Text variant="bodySm" color="secondary">More ways to learn, remember and grow</Text>
         </VStack>
-
-        <Card
-          style={{
-            backgroundColor: tokens.background.elevated,
-            borderColor: tokens.border.strong,
-          }}
-        >
-          <HStack gap={3}>
-            <HStack
-              align="center"
-              justify="center"
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: 18,
-                backgroundColor: tokens.background.secondary,
-              }}
-            >
-              <Icon name="Sparkles" color="brand" size={24} />
-            </HStack>
-            <VStack gap={1} style={{ flex: 1 }}>
-              <Text variant="headingSm">Your Islamic Library</Text>
-              <Text variant="bodySm" color="secondary">
-                Quran, hadith and daily duas—available offline.
-              </Text>
-            </VStack>
-          </HStack>
-        </Card>
 
         <VStack gap={2}>
           <Text variant="headingSm">Library</Text>
