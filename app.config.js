@@ -12,7 +12,7 @@ module.exports = ({ config }) => ({
     splash: {
         image: './assets/splash.png',
         resizeMode: 'contain',
-        backgroundColor: '#0F6B5C',
+        backgroundColor: '#183E45',
     },
     assetBundlePatterns: ['**/*'],
     plugins: [
@@ -23,7 +23,7 @@ module.exports = ({ config }) => ({
             'expo-notifications',
             {
                 icon: './assets/notification-icon.png',
-                color: '#0F6B5C',
+                color: '#183E45',
             },
         ],
     ],
@@ -35,7 +35,7 @@ module.exports = ({ config }) => ({
         package: 'com.mutqin.app',
         adaptiveIcon: {
             foregroundImage: './assets/adaptive-icon.png',
-            backgroundColor: '#0F6B5C',
+            backgroundColor: '#183E45',
         },
     },
     extra: {

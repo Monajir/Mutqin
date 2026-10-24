@@ -47,3 +47,5 @@ class HealthResponseDto(BaseModel):
     status: str
     databaseReady: bool | None = None
     modelReady: bool | None = None
+    asrProvider: str | None = None
+    modelVersion: str | None = None

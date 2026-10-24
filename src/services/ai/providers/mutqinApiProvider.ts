@@ -31,6 +31,9 @@ export class MutqinApiHifzEvaluationProvider implements HifzEvaluationProvider {
       return response.result;
     } catch (error) {
       if (error instanceof ApiError) {
+        if (error.status === 422 && error.responseCode === 'no_speech') {
+          throw new RecitationEvaluationError('no_speech', 'No speech detected. Please record again.');
+        }
         if (error.code === 'timeout') {
           throw new RecitationEvaluationError('timeout', 'Evaluation timed out. Please try a shorter recording.');
         }

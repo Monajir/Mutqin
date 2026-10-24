@@ -25,9 +25,15 @@ Example value:
 
 The response contains an evaluation ID, model version, per-word results, aggregate counts, and revision suggestions.
 
+If the recording contains no detected speech, the API returns HTTP 422 with
+`{"code":"no_speech","detail":"No speech detected. Please record again."}`.
+This response has no score, word flags, or revision suggestions. Invalid audio
+and service failures remain separate errors. The phone keeps the selected
+passage available for another attempt.
+
 ## Important scope
 
-The service reports normalized word matches, substitutions, and omissions. It does **not** claim pronunciation or Tajweed assessment. Audio is written to a temporary file for decoding and deleted after the request.
+The service reports normalized word matches, substitutions, and omissions. It does **not** claim pronunciation or Tajweed assessment. Audio is written to a temporary file for decoding and deleted after the request. The default Groq provider uploads speech recordings to Groq; local temporary-file deletion does not describe the provider's retention policy.
 
 ## Setup
 
@@ -43,13 +49,30 @@ The Python dependencies include a platform-specific FFmpeg binary. This is
 used to convert Android M4A/AAC recordings to mono 16 kHz WAV before ASR, so
 Windows does not require a separate FFmpeg installation.
 
-Long recordings are split at quiet pauses before transcription so no audio is
+After decoding once, bundled Silero VAD 6.2.3 weights check speech presence on
+the CPU. No runtime download, cloud service, or extra audio decoder is needed.
+The gate uses threshold 0.5 and a minimum speech-region duration of 250 ms.
+Accepted M4A audio is uploaded in full to Groq. With the optional local provider,
+decoded samples retain the existing quiet-point chunking. VAD does not trim pauses or verify Quran content. Its
+stateful model is locked and reset between requests; detector failures return
+a service error instead of being misreported as silence. No-speech attempts
+in benchmark mode are retained with status `rejected`, reason `no_speech`.
+
+See [`VAD_REPAIR_VALIDATION.md`](VAD_REPAIR_VALIDATION.md) for replay evidence,
+limitations, activation steps, and the remaining phone checks.
+
+In local mode, long recordings are split at quiet pauses before transcription so no audio is
 lost at Whisper's 30-second input boundary. The server logs the recognized
 words and aggregate word counts for local accuracy diagnostics.
 
-The default ASR checkpoint is `basharalrfooh/whisper-small-quran`, selected
-for its broader normal-reciter training set. Override it with `ASR_MODEL_ID`
-when benchmarking another compatible Whisper checkpoint.
+The default is **Groq `whisper-large-v3`**, with Arabic, temperature 0, and no
+expected-verse prompt. Set `GROQ_API_KEY` in the backend environment or this
+directory's Git-ignored `.env`. Only that credential is read from `.env`.
+`ASR_PROVIDER=local` selects the preserved `basharalrfooh/whisper-small-quran`
+checkpoint; `ASR_MODEL_ID` overrides that local checkpoint only.
+Groq errors/timeouts/empty transcripts return HTTP 503 without a score, with
+no automatic retries or fallback. `/health/ready` identifies the provider and
+model but does not verify remote connectivity, credentials, or quota.
 
 For local ASR diagnosis only, set `ASR_DEBUG_AUDIO_PATH` to retain the latest
 uploaded recording. The file is overwritten on each evaluation; leave the
@@ -63,7 +86,18 @@ Copy-Item ..\assets\db\quran-content.db .\data\quran-content.db
 
 ## Run locally
 
-GPU mode is recommended on a Windows computer with a supported NVIDIA GPU. Install the matching CUDA-enabled PyTorch build once:
+On Ubuntu, from the project root:
+
+```bash
+npm run dev:backend                  # Groq + local VAD
+ASR_PROVIDER=local npm run dev:backend  # Local Whisper + local VAD
+```
+
+See [the daily development guide](../LOCAL_DEVELOPMENT.md). Groq mode requires
+internet access on the backend computer and does not load local Whisper or need
+CUDA. Stop the backend with Ctrl+C before changing providers.
+
+For the optional local Whisper mode on Windows, install the matching CUDA-enabled PyTorch build once:
 
 ```powershell
 .\.venv\python.exe -m pip install --force-reinstall torch==2.4.1 --index-url https://download.pytorch.org/whl/cu121
@@ -82,10 +116,18 @@ To explicitly use CPU instead:
 ```powershell
 $env:QURAN_DB_PATH=".\data\quran-content.db"
 $env:ASR_DEVICE="cpu"
+$env:ASR_PROVIDER="local"
 .\.venv\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 ### Preserve recordings for transcription testing
+
+For the Ubuntu workflow, use `npm run dev:benchmark` from the project root.
+It saves each submission separately, along with raw transcripts, response data,
+timings, and model/pipeline metadata. See
+[`BENCHMARK_RECORDING_GUIDE.md`](BENCHMARK_RECORDING_GUIDE.md) for the recording
+plan and labelling commands. This is opt-in via `ASR_BENCHMARK_DIR`; normal
+`dev:backend` sessions do not retain benchmark recordings.
 
 The GPU launcher saves each uploaded recording to `data/last-recitation.m4a` and its selected ayah references to `data/last-recitation.m4a.json`. The next submission overwrites these latest files. This is a local development diagnostic: recordings contain personal voice data and are excluded from Git. Do not enable `ASR_DEBUG_AUDIO_PATH` on a public deployment without an explicit retention/consent policy.
 
@@ -127,6 +169,8 @@ Then restart the Expo development server.
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `QURAN_DB_PATH` | `./data/quran-content.db` | Canonical Quran database |
+| `ASR_PROVIDER` | `groq` | `groq` or `local`; selected at startup |
+| `GROQ_API_KEY` | none | Backend-only key; environment overrides service `.env` |
 | `ASR_MODEL_ID` | `basharalrfooh/whisper-small-quran` | Hugging Face model ID |
 | `ASR_DEVICE` | `cpu` | `cpu` or `cuda` |
 | `API_PREFIX` | `/v1` | Versioned API prefix |
@@ -148,6 +192,7 @@ docker build -t mutqin-backend .
 docker run --rm -p 8000:8000 `
   -v "${PWD}\data:/data" `
   -e QURAN_DB_PATH=/data/quran-content.db `
+  -e GROQ_API_KEY `
   -e ASR_DEVICE=cpu `
   mutqin-backend
 ```

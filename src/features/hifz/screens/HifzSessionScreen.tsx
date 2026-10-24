@@ -97,13 +97,14 @@ export function HifzSessionScreen() {
 
         {isReviewing ? (
           <VStack gap={4}>
-            <HStack gap={4} justify="center">
+            <HStack gap={4} justify="center" wrap>
               <Text variant="caption" style={{ color: tokens.hifz.correct }}>● Matched</Text>
-              <Text variant="caption" style={{ color: tokens.hifz.incorrect }}>● Review word</Text>
+              <Text variant="caption" style={{ color: tokens.hifz.skipped }}>● Not detected</Text>
+              <Text variant="caption" style={{ color: tokens.hifz.incorrect }}>● Possible mismatch</Text>
             </HStack>
             <AccuracySummaryCard result={result} />
             <Text variant="caption" color="secondary">
-              AI may mishear your voice. Red words need review, not necessarily correction. This feedback does not change your memorization progress.
+              AI may mishear your voice. Blue and red words need review, not necessarily correction. This feedback does not change your memorization progress.
             </Text>
             <HStack gap={3}>
               <Button

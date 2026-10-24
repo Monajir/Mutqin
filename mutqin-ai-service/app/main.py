@@ -3,15 +3,19 @@ import logging
 import os
 import shutil
 import tempfile
+import time
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import JSONResponse
 from pydantic import TypeAdapter, ValidationError
 from starlette.concurrency import run_in_threadpool
 
 from app.audio import AudioDecodeError
-from app.asr import WhisperRecitationTranscriber
+from app.asr import create_transcriber
+from app.groq_asr import TranscriptionUnavailable
+from app.benchmark_capture import BenchmarkCapture
 from app.config import settings
 from app.quran_repository import QuranRepository, QuranRepositoryError
 from app.schemas import (
@@ -23,6 +27,7 @@ from app.schemas import (
     WordEvaluationDto,
 )
 from app.scoring import aggregate_result, score_session
+from app.vad import NoSpeechDetected
 
 logger = logging.getLogger("uvicorn.error")
 AYAH_LIST_ADAPTER = TypeAdapter(list[AyahReferenceDto])
@@ -46,12 +51,13 @@ async def lifespan(app: FastAPI):
     # Tests may inject a fake transcriber before startup. Production loads the
     # configured model once and reuses it for every request.
     if getattr(app.state, "transcriber", None) is None and repository.is_ready():
-        logger.info("Loading recitation model %s on %s", settings.asr_model_id, settings.asr_device)
-        app.state.transcriber = WhisperRecitationTranscriber(
-            model_id=settings.asr_model_id,
-            device=settings.asr_device,
-        )
-    yield
+        logger.info("Initializing recitation provider: %s", settings.asr_provider)
+        app.state.transcriber = create_transcriber(settings)
+        logger.info("Recitation model ready: %s", app.state.transcriber.model_version)
+    try:
+        yield
+    finally:
+        app.state.transcriber = None
 
 
 app = FastAPI(
@@ -121,7 +127,9 @@ async def health_ready():
     model_ready = getattr(app.state, "transcriber", None) is not None
     if not database_ready or not model_ready:
         raise HTTPException(status_code=503, detail="Evaluation service is not ready.")
-    return HealthResponseDto(status="ready", databaseReady=True, modelReady=True)
+    return HealthResponseDto(status="ready", databaseReady=True, modelReady=True,
+                            asrProvider=getattr(app.state.transcriber, "provider", None),
+                            modelVersion=app.state.transcriber.model_version)
 
 
 @app.post(f"{settings.api_prefix}/hifz/evaluate", response_model=EvaluateResponseDto)
@@ -141,15 +149,26 @@ async def evaluate_recitation(
         raise HTTPException(status_code=400, detail=str(error)) from error
 
     temporary_path = await save_upload(audio)
-    if settings.asr_debug_audio_path:
-        debug_path = os.path.abspath(settings.asr_debug_audio_path)
-        os.makedirs(os.path.dirname(debug_path), exist_ok=True)
-        shutil.copyfile(temporary_path, debug_path)
-        with open(debug_path + ".json", "w", encoding="utf-8") as metadata_file:
-            json.dump({"expectedAyahs": [reference.model_dump() for reference in references]}, metadata_file, ensure_ascii=False, indent=2)
-        logger.info("Saved the latest debug recording to %s", debug_path)
+    capture = None
+    evaluation_id = str(uuid4())
+    started = time.perf_counter()
     try:
+        if settings.asr_debug_audio_path:
+            debug_path = os.path.abspath(settings.asr_debug_audio_path)
+            os.makedirs(os.path.dirname(debug_path), exist_ok=True)
+            shutil.copyfile(temporary_path, debug_path)
+            with open(debug_path + ".json", "w", encoding="utf-8") as metadata_file:
+                json.dump({"expectedAyahs": [reference.model_dump() for reference in references]}, metadata_file, ensure_ascii=False, indent=2)
+            logger.info("Saved the latest debug recording to %s", debug_path)
+        if settings.asr_benchmark_dir:
+            capture = BenchmarkCapture(
+                settings.asr_benchmark_dir, temporary_path, references,
+                canonical_ayahs, transcriber, evaluation_id,
+            )
+            logger.info("Benchmark recording saved: %s", capture.capture_id)
+        inference_started = time.perf_counter()
         recognized_words = await run_in_threadpool(transcriber.transcribe, temporary_path)
+        inference_seconds = time.perf_counter() - inference_started
         ayah_evaluations = score_session(canonical_ayahs, recognized_words)
         result = aggregate_result(ayah_evaluations)
         logger.info(
@@ -161,17 +180,49 @@ async def evaluate_recitation(
             result.incorrect_word_count,
             result.overall_accuracy * 100,
         )
+        response = build_evaluation_response(evaluation_id, transcriber.model_version, ayah_evaluations, result)
+        if capture:
+            capture.complete(recognized_words, response, inference_seconds, time.perf_counter() - started)
+            logger.info("Benchmark result saved: %s", capture.capture_id)
+        return response
+    except NoSpeechDetected:
+        if capture:
+            try:
+                capture.reject("no_speech")
+            except OSError:
+                logger.exception("Could not save benchmark rejection status")
+        return JSONResponse(status_code=422, content={
+            "code": "no_speech",
+            "detail": "No speech detected. Please record again.",
+        })
+    except TranscriptionUnavailable:
+        if capture:
+            record_capture_failure(capture, "transcription_unavailable")
+        raise HTTPException(status_code=503, detail="Speech recognition is temporarily unavailable. Please try again later.") from None
     except AudioDecodeError as error:
+        if capture:
+            record_capture_failure(capture, "audio_decode_error")
         raise HTTPException(status_code=422, detail=str(error)) from error
     except Exception as error:
+        if capture:
+            record_capture_failure(capture, type(error).__name__)
         logger.exception("Recitation evaluation failed")
         raise HTTPException(status_code=503, detail="Recitation evaluation failed.") from error
     finally:
         os.unlink(temporary_path)
 
+
+def record_capture_failure(capture, error_type):
+    try:
+        capture.fail(error_type)
+    except OSError:
+        logger.exception("Could not save benchmark failure status")
+
+
+def build_evaluation_response(evaluation_id, model_version, ayah_evaluations, result):
     return EvaluateResponseDto(
-        evaluationId=str(uuid4()),
-        modelVersion=transcriber.model_version,
+        evaluationId=evaluation_id,
+        modelVersion=model_version,
         result=RecitationEvaluationResultDto(
             ayahs=[
                 AyahEvaluationDto(

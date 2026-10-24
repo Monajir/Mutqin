@@ -45,8 +45,9 @@ export function VerseRevealer({ fullText, revealedWords, totalWordCount }: Verse
       case 'correct':
         return tokens.hifz.correct;
       case 'incorrect':
-      case 'skipped':
         return tokens.hifz.incorrect;
+      case 'skipped':
+        return tokens.hifz.skipped;
     }
   };
 

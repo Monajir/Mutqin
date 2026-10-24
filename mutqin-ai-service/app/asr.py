@@ -5,6 +5,7 @@ from typing import Protocol
 
 from app.audio import decode_audio
 from app.scoring import RecognizedWord
+from app.vad import NoSpeechDetected, SileroSpeechDetector
 
 logger = logging.getLogger("uvicorn.error")
 SAMPLE_RATE = 16_000
@@ -58,11 +59,14 @@ class WhisperRecitationTranscriber:
     not a reliable pronunciation or Tajweed score, so v1 does not expose one.
     """
 
+    provider = "local"
+
     def __init__(self, model_id: str, device: str = "cpu"):
         import torch
         from transformers import WhisperForConditionalGeneration, WhisperProcessor
 
         self.model_version = model_id
+        self.speech_detector = SileroSpeechDetector()
         self.device = device if device == "cuda" and torch.cuda.is_available() else "cpu"
         self.processor = WhisperProcessor.from_pretrained(
             model_id,
@@ -82,6 +86,8 @@ class WhisperRecitationTranscriber:
         import torch
 
         audio = decode_audio(audio_path)
+        if not self.speech_detector.has_speech(audio):
+            raise NoSpeechDetected("No speech detected. Please record again.")
         transcripts: list[str] = []
 
         for chunk in split_audio_at_quiet_points(audio):
@@ -122,3 +128,12 @@ class WhisperRecitationTranscriber:
             " ".join(word.text for word in recognized_words),
         )
         return recognized_words
+
+
+def create_transcriber(settings) -> RecitationTranscriber:
+    if settings.asr_provider == "groq":
+        from app.groq_asr import GroqRecitationTranscriber
+        return GroqRecitationTranscriber(settings.groq_api_key)
+    if settings.asr_provider == "local":
+        return WhisperRecitationTranscriber(settings.asr_model_id, settings.asr_device)
+    raise ValueError("ASR_PROVIDER must be groq or local.")

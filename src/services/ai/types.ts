@@ -34,6 +34,7 @@ export interface EvaluateRecitationInput {
 }
 
 export type EvaluationFailureReason =
+  | 'no_speech'
   | 'network_error'
   | 'timeout'
   | 'validation_error'

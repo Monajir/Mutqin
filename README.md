@@ -4,6 +4,12 @@ Mutqin is an offline-first Islamic learning application built with React Native,
 
 ## Current project status
 
+For the **23 October 2026 post-VAD checkpoint**, the presentation detour, and
+the plan to resume AI reliability work, read
+[`RECITATION_RELIABILITY_CHECKPOINT.md`](RECITATION_RELIABILITY_CHECKPOINT.md).
+The current provider shortlist is in
+[`PRESENTATION_AI_OPTIONS.md`](PRESENTATION_AI_OPTIONS.md).
+
 The Android application is usable as a development build, but it is not yet production-ready.
 
 | Area | Current condition |
@@ -53,6 +59,10 @@ The prayer screen identifies whether the displayed schedule came from AlAdhan or
 
 ## Getting started
 
+For the restored Ubuntu/Android USB workflow, see
+[`LOCAL_DEVELOPMENT.md`](LOCAL_DEVELOPMENT.md). It includes the verified runtime
+versions, backend setup, and `npm run dev:usb` / `npm run dev:backend` launchers.
+
 Install the dependencies:
 
 ```bash
@@ -97,11 +107,17 @@ After changing an Expo public environment variable, restart Metro. A new native/
 
 [`mutqin-ai-service`](mutqin-ai-service/) contains the minimal FastAPI backend for `POST /v1/hifz/evaluate`. It validates a consecutive ayah range, retrieves canonical Quran text, transcribes the recording through a replaceable ASR adapter, and deterministically aligns the recognized words with the expected passage.
 
+The default pipeline is local Silero VAD → **Groq Whisper Large V3** → Arabic
+normalization and word comparison. The backend key stays in the service `.env`
+or environment. `ASR_PROVIDER=local` preserves the local Quran Whisper option
+for Phase R2 research; provider failures do not trigger automatic fallback.
+See [integration verification](mutqin-ai-service/GROQ_INTEGRATION_2026-10-23.md).
+
 The workflow and service contract exist, but the AI feature still needs:
 
-- Real-device and real-recitation accuracy benchmarking
+- Broader real-device and recitation benchmarking beyond the small saved corpus
 - Authentication, rate limiting, monitoring, and secure deployment
-- Selection of the production ASR model based on measured results
+- Further validation of the presentation provider before production use
 
 The first version reports word matches, substitutions, and omissions only. It does not claim pronunciation or Tajweed assessment. Evaluation results update local Hifz progress only after the user accepts them.
 

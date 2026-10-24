@@ -20,7 +20,7 @@ export function AccuracySummaryCard({ result }: AccuracySummaryCardProps) {
 
   const stats: { label: string; value: number; color: string }[] = [
     { label: 'Matched words', value: result.correctWordCount, color: tokens.hifz.correct },
-    { label: 'Not detected', value: result.missedWordCount, color: tokens.hifz.incorrect },
+    { label: 'Not detected', value: result.missedWordCount, color: tokens.hifz.skipped },
     { label: 'Possible mismatches', value: result.incorrectWordCount, color: tokens.hifz.incorrect },
   ];
 

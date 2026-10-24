@@ -16,7 +16,41 @@ android/
 ios/
 
 # Env
-.env*.local
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+
+# Local signing credentials (use EAS-managed credentials for cloud builds)
+credentials.json
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
+
+# Local editor state and generated scratch/export files
+/.idea/
+/.tmp/
+/tmp/
+/coverage/
+/logcat*.txt
+
+# SQLite runtime files, not the bundled reference database itself
+*-wal
+*-shm
+*-journal
+
+# Downloaded/generated application packages
+*.apk
+*.aab
+*.ipa
+
+# Original branding inputs and local previews/backups; active PNGs stay tracked
+/assets/Gemini_*.jpeg
+/assets/Gemini_*.jpg
+/design/branding/preview.png
+/design/branding/previous-assets/
 
 # Logs
 *.log
@@ -46,3 +80,5 @@ mutqin-ai-service/.venv/
 /MAD_AI.md
 /Mutqin_Project_Progress_Presentation.pptx
 /Mutqin_Project_Progress_Presentation.pptx.inspect.ndjson
+/Mutqin_Terminal_Command_Cheat_Sheet.pdf
+/PRESENTATION_AI_OPTIONS.md

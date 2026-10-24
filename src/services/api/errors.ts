@@ -17,13 +17,15 @@ export class ApiError extends Error {
   readonly code: ApiErrorCode;
   readonly status?: number;
   readonly retryable: boolean;
+  readonly responseCode?: string;
 
-  constructor(code: ApiErrorCode, message: string, status?: number, retryable = false) {
+  constructor(code: ApiErrorCode, message: string, status?: number, retryable = false, responseCode?: string) {
     super(message);
     this.name = 'ApiError';
     this.code = code;
     this.status = status;
     this.retryable = retryable;
+    this.responseCode = responseCode;
   }
 
   static fromResponse(status: number, body: unknown): ApiError {
@@ -32,7 +34,9 @@ export class ApiError extends Error {
     if (status === 403) return new ApiError('forbidden', message, status, false);
     if (status === 404) return new ApiError('not_found', message, status, false);
     if (status === 400 || status === 413 || status === 415 || status === 422) {
-      return new ApiError('validation_error', message, status, false);
+      const responseCode = body && typeof body === 'object' && 'code' in body && typeof body.code === 'string'
+        ? body.code : undefined;
+      return new ApiError('validation_error', message, status, false, responseCode);
     }
     if (status >= 500) return new ApiError('server_error', message, status, true);
     return new ApiError('unknown', message, status, false);
